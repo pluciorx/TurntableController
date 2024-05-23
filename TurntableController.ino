@@ -1,7 +1,5 @@
 #include <Adafruit_Debounce.h>
-#include <ezButton.h>
 #include "Ucglib.h"  // Include Ucglib library to drive the display
-
 #include <MX1508.h>
 
 #define PINA 9
@@ -18,7 +16,6 @@
 Adafruit_Debounce btnMenuRight(PIN_BTN_RIGHT, LOW);
 Adafruit_Debounce btnMenuLeft(PIN_BTN_LEFT, LOW);
 Adafruit_Debounce btnMenuEnter(PIN_BTN_MID, LOW);
-
 
 MX1508 motorA(PINA, PINB, FAST_DECAY, 2);
 int PWMResolution = 90;
@@ -108,8 +105,6 @@ void  interruptRoutine() {
 		numPulses++;
 	}
 	last_interrupt_time = interrupt_time;
-
-	
 }
 
 void loop() {
@@ -169,9 +164,7 @@ void loop() {
 	case Running:
 	{		
 		printState("Playing:");
-		
-		
-		
+
 		while (isPlaying) {
 
 			measureSpeed();
@@ -200,7 +193,6 @@ void loop() {
 	}break;
 	case Stopping:
 	{
-		
 		printState("Stopping");
 		
 		int currPwm = motorA.getPWM();
@@ -213,7 +205,6 @@ void loop() {
 		}
 		
 		SetState(E_STATE::Idle);
-		
 	}
 	}
 }
@@ -274,8 +265,7 @@ void printSelectedSpeed(double selectedSpeed)
 
 void printMeasuredSpeed(float currentSpeed)
 {
-	Serial.print("Curr Speed:"); Serial.println(currentSpeed);
-	
+	Serial.print("Curr Speed:"); Serial.println(currentSpeed);	
 	//Serial.print("Curr Speed:"); Serial.println(string);
 	ucg.setFont(ucg_font_9x18_tr);  // Set font
 	ucg.setColor(0, 0, 0, 0);  // Set color (0,R,G,B)
@@ -294,7 +284,6 @@ void printState(const char * text)
 	Serial.println(text);
 	ucg.setColor(0, 0, 0, 0);  // Set color (0,R,G,B)
 	ucg.drawBox(0, 30, 80, 20);
-
 	ucg.setFont(ucg_font_9x18_tr);  // Set font
 	ucg.setColor(0, 255, 255, 255);  // Set color (0,R,G,B)
 	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
@@ -302,21 +291,7 @@ void printState(const char * text)
 	ucg.print(text);  // Print text or value
 }
 
-void printSpeed(int pwmSpd)
-{
-	char string[10];  // Create a character array of 10 characters
-	// Convert float to a string:
-	dtostrf(pwmSpd, 3, 1, string);  // (<variable>,<amount of digits we are going to use>,<amount of decimal digits>,<string name>)
-	ucg.setFont(ucg_font_10x20_tr);  // Set font
-	ucg.setColor(0, 255, 255, 0);  // Set color (0,R,G,B)
-	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
-	ucg.setPrintPos(2, 81);  // Set position (x,y)
-	ucg.print(string);  // Print text or value
-}
-
 void SetState(E_STATE newState)
 {
-	
 	_state = _state != newState ? newState : _state;
-	
 }
