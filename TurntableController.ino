@@ -40,11 +40,11 @@ Ucglib_ST7735_18x128x160_HWSPI ucg(8, 10, 12);  // (A0=8, CS=10, RESET=9)
 float selectedSpeed = 33.33;
 bool isPlaying = false;
 volatile unsigned int numPulses = 0;
-unsigned int lastMillis = 0;
-unsigned int curMillis = 0;
+unsigned long lastMillis = 0;
+unsigned long curMillis = 0;
 float revPerMin = 0.0f;
 int sweetPwm = 0;
-int minPwm = 51;
+int minPwm = 50;
 int maxPwm = 80;
 
 
@@ -100,7 +100,7 @@ void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
 	unsigned long interrupt_time = millis();
 	
-	if (interrupt_time - last_interrupt_time > 2)
+	if (interrupt_time - last_interrupt_time > 3)
 	{
 		numPulses++;
 	}
@@ -115,6 +115,7 @@ void loop() {
 	{
 		printState("Speed:");
 		isPlaying = false;
+		printMeasuredSpeed(0);
 		while (1)
 		{
 			updateButtons();
@@ -134,29 +135,28 @@ void loop() {
 			{
 				SetState(E_STATE::Starting);
 				Serial.println("Play Pressed");
+				revPerMin = 0;
 				btnMenuEnter.update();
 				isPlaying = true;
 				break;
 			}
-			measureSpeed();
+			
 		}
 		
 
 	}break;
 	case Starting:
-	{
-		int pwm = 54;
-		if (selectedSpeed == 33.33f) pwm = 56;
-		if (selectedSpeed == 45) pwm = 90;
-
-		int currPwm = 51;
-		while (currPwm < pwm)
+	{	
+		printState("Starting:");
+		int pwm = 50;
+				
+		while (revPerMin < selectedSpeed - 5)
 		{
-			motorA.motorGo(currPwm++);
+			motorA.motorGo(pwm++);
 			delay(200);
-	
+			measureSpeed();
 		}
-		Serial.print("Reached speed:"); Serial.println(currPwm);
+		Serial.print("Reached speed:"); Serial.println(selectedSpeed);
 		isPlaying = true;
 		SetState(E_STATE::Running);
 
@@ -201,7 +201,8 @@ void loop() {
 			if (currPwm < 38) currPwm = 0;
 			motorA.motorGo(currPwm--);
 			//if spd = 0 then break;
-			
+			delay(100);
+			measureSpeed();
 		}
 		
 		SetState(E_STATE::Idle);
@@ -216,6 +217,7 @@ void measureSpeed()
 		revPerMin = 60 * ((float)numPulses / (float)windowIntervalSec / NUM_MARKERS);
 		lastMillis = curMillis;
 		numPulses = 0;
+		printMeasuredSpeed(revPerMin);
 
 		float dev = abs(selectedSpeed - revPerMin);
 
@@ -229,7 +231,7 @@ void measureSpeed()
 
 			if (revPerMin > selectedSpeed && motorA.getPWM() > minPwm)
 				motorA.motorGo(motorA.getPWM() - 1);
-			delay(200);
+			delay(100);
 		}
 		else {
 			sweetPwm = motorA.getPWM();
@@ -237,7 +239,7 @@ void measureSpeed()
 			motorA.motorGo(sweetPwm);
 
 		}
-		printMeasuredSpeed(revPerMin);
+		
 
 	}
 }
@@ -269,7 +271,7 @@ void printMeasuredSpeed(float currentSpeed)
 	//Serial.print("Curr Speed:"); Serial.println(string);
 	ucg.setFont(ucg_font_9x18_tr);  // Set font
 	ucg.setColor(0, 0, 0, 0);  // Set color (0,R,G,B)
-	ucg.drawBox(70, 70, 80, 20);
+	ucg.drawBox(70, 70, 50, 20);
 	ucg.setColor(0, 255, 255, 0);  // Set color (0,R,G,B)
 	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
 	ucg.setPrintPos(70, 90);  // Set position (x,y)
