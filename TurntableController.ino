@@ -180,7 +180,7 @@ void loop() {
 	}break;
 	case Stopping:
 	{
-		printState("Stopping");
+		printState("    Stopping    ");
 		
 		int currPwm = motorA.getPWM();
 		while (currPwm > 0)
