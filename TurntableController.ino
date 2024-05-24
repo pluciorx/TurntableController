@@ -1,6 +1,7 @@
+#include <LiquidCrystal_I2C.h>
 #include <Adafruit_Debounce.h>
-#include "Ucglib.h"  // Include Ucglib library to drive the display
 #include <MX1508.h>
+
 
 #define PINA 9
 #define PINB 9
@@ -31,11 +32,8 @@ int PWMResolution = 90;
 #define WHITE    0xFFFF
 #define GREY     0xC618
 
-#define cs 12
-#define dc 9
-#define rst 8
-
-Ucglib_ST7735_18x128x160_HWSPI ucg(8, 10, 12);  // (A0=8, CS=10, RESET=9)
+//LCD
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 float selectedSpeed = 33.33;
 bool isPlaying = false;
@@ -44,11 +42,11 @@ unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0.0f;
 int sweetPwm = 0;
-int minPwm = 50;
-int maxPwm = 80;
+#define minPwm 50
+#define maxPwm 90
 
 
-#define windowIntervalSec 0.5 //2 seconds window - increase this if the no. of markers is less for better accuracy
+float windowIntervalSec = 0.4f; //2 seconds window - increase this if the no. of markers is less for better accuracy
 
 #define NUM_MARKERS 198 //TO DO: Check this as per your setup 200
 
@@ -64,20 +62,12 @@ E_STATE _state;
 
 void setup() {
 	Serial.begin(115200);
-	ucg.begin(UCG_FONT_MODE_SOLID);  // It writes a background for the text. This is the recommended option
-
+	lcd.init(); // initialize the lcd	
+	lcd.backlight();
+	lcd.clear();
+	
 	lastMillis = millis();
 	numPulses = 0;
-
-	ucg.clearScreen();  // Clear the screen
-	// Set display orientation:
-	ucg.setRotate90();  // Put 90, 180 or 270, or co
-	ucg.setFont(ucg_font_10x20_tr);
-
-	ucg.setColor(0, 255, 255, 255);  // Set color (0,R,G,B)
-	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
-	ucg.setPrintPos(0, 24);  // Set position (x,y)
-	ucg.print("   Turntable   ");  // Print text or value
 
 	motorA.setPWM16(2, PWMResolution); // prescaler at 8, resolution 1000, PWM frequency = 16Mhz/8/1000=2000Hz
 
@@ -113,22 +103,19 @@ void loop() {
 	{
 	case Idle:
 	{
-		printState("Speed:");
+		printState("<-    Speed   ->");
 		isPlaying = false;
-		printMeasuredSpeed(0);
+		
 		while (1)
 		{
+			printSelectedSpeed(selectedSpeed);
 			updateButtons();
 			if (btnMenuRight.justPressed()) {
 				selectedSpeed = 45;
-				printSelectedSpeed(selectedSpeed);
-
 			}
 			if (btnMenuLeft.justPressed())
 			{
 				selectedSpeed = 33.33;
-				printSelectedSpeed(selectedSpeed);
-
 			}
 
 			if (btnMenuEnter.justPressed())
@@ -147,7 +134,7 @@ void loop() {
 	}break;
 	case Starting:
 	{	
-		printState("Starting:");
+		printState("Starting...");
 		int pwm = 50;
 				
 		while (revPerMin < selectedSpeed - 5)
@@ -163,7 +150,7 @@ void loop() {
 	}break;
 	case Running:
 	{		
-		printState("Playing:");
+		printState("-    Speed     +");
 
 		while (isPlaying) {
 
@@ -222,25 +209,25 @@ void measureSpeed()
 		float dev = abs(selectedSpeed - revPerMin);
 
 		Serial.print("Deviation:"); Serial.println(dev);
-		Serial.print("Morot PWM:"); Serial.println(motorA.getPWM());
-
+		int mPwm = motorA.getPWM();
+		
 		if (dev > 0.5f)
 		{
-			if (revPerMin < selectedSpeed && motorA.getPWM() < maxPwm)
+			
+			if (revPerMin < selectedSpeed && mPwm < maxPwm)
 				motorA.motorGo(motorA.getPWM() + 1);
 
-			if (revPerMin > selectedSpeed && motorA.getPWM() > minPwm)
+			if (revPerMin > selectedSpeed && mPwm > minPwm)
 				motorA.motorGo(motorA.getPWM() - 1);
-			delay(100);
+			windowIntervalSec = 0.1;
 		}
 		else {
-			sweetPwm = motorA.getPWM();
+			sweetPwm = mPwm;
 			Serial.print("Using PWM Found:"); Serial.println(sweetPwm);
 			motorA.motorGo(sweetPwm);
-
+			windowIntervalSec = 2;
+			
 		}
-		
-
 	}
 }
 
@@ -251,46 +238,36 @@ void updateButtons()
 	btnMenuRight.update();
 }
 void printSelectedSpeed(double selectedSpeed)
-{
-	Serial.print("Speed:"); Serial.println(selectedSpeed);
-	char string[5];  // Create a character array of 10 characters
+{	
+	char string[5];  
 	// Convert float to a string:
-	dtostrf(selectedSpeed, 3, 2, string);  // (<variable>,<amount of digits we are going to use>,<amount of decimal digits>,<string name>)
-	ucg.setFont(ucg_font_9x18_tr);  // Set font
-	ucg.setColor(0, 255, 255, 0);  // Set color (0,R,G,B)
-	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
-	ucg.setPrintPos(80, 45);  // Set position (x,y)
-	ucg.print(string);  // Print text or value
-	ucg.setPrintPos(125, 45);  // Set position (x,y)
-	ucg.print("rpm");  // Print text or value
+	dtostrf(selectedSpeed, 3, 2, string);  
+	lcd.setCursor(6, 1);
+	lcd.print("     ");
+	lcd.setCursor(6, 1);
+	lcd.print(string);
+	lcd.setCursor(12, 1);
+	lcd.print("rpm");  
 }
 
 void printMeasuredSpeed(float currentSpeed)
 {
 	Serial.print("Curr Speed:"); Serial.println(currentSpeed);	
-	//Serial.print("Curr Speed:"); Serial.println(string);
-	ucg.setFont(ucg_font_9x18_tr);  // Set font
-	ucg.setColor(0, 0, 0, 0);  // Set color (0,R,G,B)
-	ucg.drawBox(70, 70, 50, 20);
-	ucg.setColor(0, 255, 255, 0);  // Set color (0,R,G,B)
-	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
-	ucg.setPrintPos(70, 90);  // Set position (x,y)
-	ucg.print(currentSpeed);  // Print text or value
-	ucg.setPrintPos(125, 90);  // Set position (x,y)
-	ucg.print("rpm");  // Print text or value
+	lcd.setCursor(6, 1);
+	lcd.print("     ");
+	lcd.setCursor(6, 1);
+	lcd.print(currentSpeed);
+		lcd.setCursor(12, 1);
+	lcd.print("rpm");
 }
 
 
 void printState(const char * text)
 {	
 	Serial.println(text);
-	ucg.setColor(0, 0, 0, 0);  // Set color (0,R,G,B)
-	ucg.drawBox(0, 30, 80, 20);
-	ucg.setFont(ucg_font_9x18_tr);  // Set font
-	ucg.setColor(0, 255, 255, 255);  // Set color (0,R,G,B)
-	ucg.setColor(1, 0, 0, 0);  // Set color of text background (1,R,G,B)
-	ucg.setPrintPos(2, 45);  // Set position (x,y)
-	ucg.print(text);  // Print text or value
+
+	lcd.setCursor(0,0 );
+	lcd.print(text);
 }
 
 void SetState(E_STATE newState)
