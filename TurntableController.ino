@@ -1,4 +1,5 @@
-﻿#include <TB9051FTGMotorCarrier.h>
+﻿#include <FastPwmPin.h>
+#include <TB9051FTGMotorCarrier.h>
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_Debounce.h>
 
@@ -23,13 +24,10 @@ static float throttlePercent{ 0.0f };
 //LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-float selectedSpeed = 33.33;
 bool isPlaying = false;
 volatile unsigned int numPulses = 0;
-unsigned long lastMillis = 0;
-unsigned long curMillis = 0;
-float revPerMin = 0.0f;
-int sweetPwm = 0;
+
+
 #define minPwm 34
 #define maxPwm 90
 #define DEFAULT_INTERVAL 1
@@ -37,7 +35,7 @@ int sweetPwm = 0;
 float windowIntervalSec = DEFAULT_INTERVAL; //2 seconds window - increase this if the no. of markers is less for better accuracy
 
 #define NUM_MARKERS 55 //TO DO: Check this as per your setup 200
-
+unsigned long frequency = 22000L;
 enum E_STATE {
 	Idle,
 	Starting,
@@ -54,11 +52,10 @@ void setup() {
 	lcd.backlight();
 	lcd.clear();
 	
-	lastMillis = millis();
 	numPulses = 0;
 
 	driver.enable();
-	driver.setOutput(throttlePercent);
+	//driver.setOutput(throttlePercent);
 
 	pinMode(PIN_SPD_D0, INPUT_PULLUP); // declare ir as input	
 		
@@ -68,9 +65,14 @@ void setup() {
 	
 	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
 
-	curMillis = lastMillis = millis();
-	revPerMin = 0.0f;
-	printSelectedSpeed(selectedSpeed);
+	printSelectedSpeed(throttlePercent);
+
+	pinMode(3, OUTPUT);
+
+	pinMode(PINA, OUTPUT);
+
+	FastPwmPin::enablePwmPin(PINA, frequency, 75);
+
 	SetState(E_STATE::Idle);	
 }
 
@@ -91,29 +93,30 @@ void loop() {
 	{
 	case Idle:
 	{
-		printState("(-)   Speed  (+)");
+		printBottomLine("(-)   Speed  (+)");
 		
 		isPlaying = false;
 		windowIntervalSec = DEFAULT_INTERVAL;
+		throttlePercent = 0;
 		while (1)
 		{
 			
 			updateButtons();
 			if (btnMenuRight.justPressed()) {
-				selectedSpeed = 45;
-				printSelectedSpeed(selectedSpeed);
+				throttlePercent = 0.2;
+				printSelectedSpeed(throttlePercent);
 			}
 			if (btnMenuLeft.justPressed())
 			{
-				selectedSpeed = 33.33;
-				printSelectedSpeed(selectedSpeed);
+				throttlePercent = 0.1;
+				printSelectedSpeed(throttlePercent);
 			}
 
 			if (btnMenuEnter.justPressed())
 			{
-				SetState(E_STATE::Starting);
+				SetState(E_STATE::Running);
 				Serial.println("Play Pressed");
-				revPerMin = 0;
+				
 				btnMenuEnter.update();
 				isPlaying = true;
 				break;
@@ -125,19 +128,11 @@ void loop() {
 	}break;
 	case Starting:
 	{	
-		printState("(-)   ....   (-)");
-		int pwm = 53;
-		motorA.motorGo(pwm);
-		digitalWrite()
+		printBottomLine("(-)   ....   (-)");		
 		lcd.setCursor(0, 0);
 		lcd.print("    Starting     ");
-		while (revPerMin < selectedSpeed - 4)
-		{
-			motorA.motorGo(pwm++);
-			delay(400);
-			measureSpeed();
-		}
-		Serial.print("Reached speed:"); Serial.println(selectedSpeed);
+	
+	
 		isPlaying = true;
 		SetState(E_STATE::Running);
 
@@ -145,86 +140,48 @@ void loop() {
 	case Running:
 	{		
 
-		printState("(-)   (||)   (+)");
+		printBottomLine("(-)   (||)   (+)");
 
 		while (isPlaying) {
 
-			measureSpeed();
+			driver.setOutput(throttlePercent);
 			
 			updateButtons();
 			if (btnMenuRight.justPressed()) {
-				selectedSpeed++;
-				sweetPwm = 0;
-				printSelectedSpeed(selectedSpeed);
-				delay(500);
+				throttlePercent +=0.01;
+				frequency += 500L;
+				printSelectedSpeed(throttlePercent);
+				delay(50);
 			}
 
 			if (btnMenuLeft.justPressed()){
-				selectedSpeed--;
-				sweetPwm = 0;
-				printSelectedSpeed(selectedSpeed);
-				delay(500);
+				throttlePercent -=0.01;
+				frequency -= 500L;
+				printSelectedSpeed(throttlePercent);
+				delay(50);
 			}
 
 			if (btnMenuEnter.justPressed() && isPlaying)
 			{
 				Serial.println("Stop Pressed");				
 				SetState(E_STATE::Stopping);
-				isPlaying = false;		
+				isPlaying = false;	
+				digitalWrite(PINA, LOW);
 				
-			}		
+			}	
+			FastPwmPin::enablePwmPin(PINA, frequency, 75);
 		}
 	}break;
 	case Stopping:
 	{
-		printState("    Stopping    ");
-		printSelectedSpeed(0);
-				
-		int currPwm = motorA.getPWM();
-		while (currPwm > 0)
-		{
-			if (currPwm < 38) currPwm = 0;
-			motorA.motorGo(currPwm--);
-			delay(300);		
-		}
-		printSelectedSpeed(0);
+		printBottomLine("    Stopping    ");
+		
 		SetState(E_STATE::Idle);
 	}
 	}
 }
 
-void measureSpeed()
-{
-	curMillis = millis();
-	if (curMillis >= lastMillis + (windowIntervalSec * 1000)) {
-		revPerMin = 60 * ((float)numPulses / (float)windowIntervalSec / NUM_MARKERS);
-		lastMillis = curMillis;
-		numPulses = 0;
-		printMeasuredSpeed(revPerMin);
 
-		float dev = abs(selectedSpeed - revPerMin);
-
-		Serial.print("Deviation:"); Serial.println(dev);
-		int mPwm = motorA.getPWM();
-		
-		if (dev > 0.3f)
-		{			
-			if (revPerMin < selectedSpeed && mPwm < maxPwm)
-				motorA.motorGo(motorA.getPWM() + 1);
-
-			if (revPerMin > selectedSpeed && mPwm > minPwm)
-				motorA.motorGo(motorA.getPWM() - 1);
-			windowIntervalSec = 0.1;
-		}
-		else {
-			sweetPwm = mPwm;
-			Serial.print("Using PWM Found:"); Serial.println(sweetPwm);
-			motorA.motorGo(sweetPwm);
-			windowIntervalSec = 2;
-			
-		}
-	}
-}
 
 void updateButtons()
 {
@@ -258,7 +215,7 @@ void printMeasuredSpeed(float currentSpeed)
 }
 
 
-void printState(const char * text)
+void printBottomLine(const char * text)
 {	
 	Serial.println(text);
 	lcd.setCursor(0,1);
