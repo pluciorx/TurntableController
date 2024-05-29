@@ -1,5 +1,4 @@
 #include <QuickPID.h>
-#include <TB9051FTGMotorCarrier.h>
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_Debounce.h>
 #include <MX1508.h>
@@ -38,13 +37,13 @@ float prevMeasuredSpeed = -1;
 
 bool isPlaying = false;
 int currPWm;
-volatile unsigned int numPulses = 0;
+volatile unsigned long numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
 
-#define minPwm 205
-#define maxPwm 300
+#define minPwm 550
+#define maxPwm 800
 
 float windowIntervalSec = 1; //2 seconds window - increase this if the no. of markers is less for better accuracy
 
@@ -143,13 +142,13 @@ void loop() {
 		
 		isPlaying = true;
 		SetState(E_STATE::Running);
-		int x = 150;
+		int x = 540;
 		while (x < minPwm) 
 		{
 			measureSpeedOnly();
 			motorA.motorGo(x);
 			x++;			
-			delay(100);			
+			delay(50);			
 		}
 		Input = numPulses;
 		//apply PID gains
@@ -166,11 +165,12 @@ void loop() {
 		while (isPlaying) 
 		{
 			measureSpeedOnly();
+			Input = numPulses;
 			myPID.Compute();
 			Serial.print("Input:"); Serial.println(Input,3);	
 			int newPwm = map(Output, 0, PWM_RESOLUTION, minPwm, maxPwm);
 
-			if (newPwm != 0 || Output != 0) {
+			if (newPwm != 0.0 || Output != 0.0) {
 				Serial.print("NewPwm:"); Serial.println(Output, 5);
 				Serial.print("Output:"); Serial.println(Output, 5);
 			}
