@@ -120,15 +120,15 @@ void loop() {
 			if (btnMenuLeft.justPressed())	{
 				selectedSpeed = 33.333; 				
 			}
-
-			Setpoint = selectedSpeed / (float)60 * (float)NUM_MARKERS;
+			//set the target impulses per second
+			
 			
 			if (btnMenuEnter.justPressed())
 			{
 				SetState(E_STATE::Starting);
 				Serial.println("Play Pressed");
 				revPerMin = 0;
-				Serial.print("Setpoint:"); Serial.println(Setpoint,3);
+				
 				btnMenuEnter.update();
 				isPlaying = true;
 				break;
@@ -150,6 +150,8 @@ void loop() {
 			x++;			
 			delay(50);			
 		}
+		Setpoint = selectedSpeed / (float)60 * (float)NUM_MARKERS;
+		Serial.print("Setpoint:"); Serial.println(Setpoint, 3);
 		Input = numPulses;
 		//apply PID gains
 		myPID.SetTunings(Kp, Ki, Kd);
@@ -165,7 +167,7 @@ void loop() {
 		while (isPlaying) 
 		{
 			measureSpeedOnly();
-			Input = numPulses;
+		
 			myPID.Compute();
 			Serial.print("Input:"); Serial.println(Input,3);	
 			int newPwm = map(Output, 0, PWM_RESOLUTION, minPwm, maxPwm);
@@ -218,6 +220,7 @@ static void measureSpeedOnly(long intervalMs)
 		lastMillis = curMillis;
 		Serial.print("Pulses for interval:"); Serial.println(numPulses);
 		numPulses = 0;
+		Input = numPulses;
 		printMeasuredSpeed(revPerMin);
 		
 	}
