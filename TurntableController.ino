@@ -45,7 +45,7 @@ float revPerMin = 0;
 #define minPwm 550
 #define maxPwm 800
 
-float windowIntervalSec = 1; //2 seconds window - increase this if the no. of markers is less for better accuracy
+float windowIntervalSec = 0.5; //2 seconds window - increase this if the no. of markers is less for better accuracy
 
 #define NUM_MARKERS 54 //TO DO: Check this as per your setup 200
 
@@ -186,7 +186,7 @@ void loop() {
 		while (currPwm > 0)
 		{
 			measureSpeedOnly(100);
-			if (currPwm < 150) currPwm = 0;
+			if (currPwm < minPwm) currPwm = 0;
 			motorA.motorGo(currPwm--);
 			delay(100);
 			
