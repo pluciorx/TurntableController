@@ -53,10 +53,9 @@ int idxSpt = 0;
 #define minPwm 545
 #define maxPwm 700
 
-#define SPD_MEASURE_INTERVAL 500 //2 seconds window - increase this if the no. of markers is less for better accuracy
-// if we have 54 markers then full revolution is 55 steps 
+#define SPD_MEASURE_INTERVAL 500 
 
-#define NUM_MARKERS 55 //TO DO: Check this as per your setup 200
+#define NUM_MARKERS 54 //TO DO: 
 
 enum E_STATE {
 	Idle,
@@ -151,14 +150,16 @@ void loop() {
 		printState("    Starting    ");
 		printMeasuredSpeed(0);
 
-		int x = 540 ;
-		while (x < minPwm)
+		motorA.motorGo(150);
+		while (numPulses < NUM_MARKERS)
 		{
 
-			motorA.motorGo(x);
-			x++;
-			delay(50);
+			HandleButtonsWhilePlaying();
+
+
 		}
+		Serial.println("ALL markers found:"); Serial.println(numPulses);
+		numPulses = 0;
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
@@ -172,7 +173,7 @@ void loop() {
 		Serial.print("Min PWM:"); Serial.println(minPwm);
 		Serial.print("Current PWM:"); Serial.println(motorA.getPWM());
 		isPlaying = true;
-		SetState(E_STATE::Running);
+		SetState(E_STATE::Stopping);
 
 	}break;
 	case Running:
@@ -180,14 +181,7 @@ void loop() {
 		printState("-     Speed    +");
 		printMeasuredSpeed(0);
 
-		while (numPulses < NUM_MARKERS )
-		{
-			
-			HandleButtonsWhilePlaying();
-
-		}
-		Serial.println("ALL markers found:"); Serial.println(numPulses);
-		numPulses = 0;
+		
 		
 		motorA.motorGo(0);
 		SetState(E_STATE::Stopping);
