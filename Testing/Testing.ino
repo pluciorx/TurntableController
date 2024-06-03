@@ -44,6 +44,7 @@ bool isAvgFound = false;
 
 int currPWm;
 volatile unsigned long numPulses = 0;
+volatile unsigned long prev_numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
@@ -65,7 +66,6 @@ enum E_STATE {
 };
 
 E_STATE _state;
-
 
 void setup() {
 	Serial.begin(115200);
@@ -101,7 +101,7 @@ void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
 	unsigned long interrupt_time = millis();
 
-	if (interrupt_time - last_interrupt_time > 10)
+	if (interrupt_time - last_interrupt_time > 8)
 	{
 		numPulses++;
 	}
@@ -148,18 +148,20 @@ void loop() {
 	case Starting:
 	{
 		printState("    Starting    ");
-		printMeasuredSpeed(0);
-
+		
 		motorA.motorGo(150);
 		while (numPulses < NUM_MARKERS)
-		{
-
-			HandleButtonsWhilePlaying();
-
-
+		{	
+			if (prev_numPulses != numPulses)
+			{
+				printBottomLineInt(numPulses);
+			}
+			prev_numPulses = numPulses;
 		}
 		Serial.println("ALL markers found:"); Serial.println(numPulses);
+		motorA.motorGo(0);
 		numPulses = 0;
+		
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
@@ -173,7 +175,7 @@ void loop() {
 		Serial.print("Min PWM:"); Serial.println(minPwm);
 		Serial.print("Current PWM:"); Serial.println(motorA.getPWM());
 		isPlaying = true;
-		SetState(E_STATE::Stopping);
+		SetState(E_STATE::Idle);
 
 	}break;
 	case Running:
@@ -358,6 +360,13 @@ void printMeasuredSpeed(float currenMeasuredtSpeed)
 		lcd.print("rpm");
 		prevMeasuredSpeed = currenMeasuredtSpeed;
 	}
+}
+static void printBottomLineInt(int value)
+{
+		lcd.setCursor(1, 1);
+		lcd.print("                ");
+		lcd.setCursor(6, 1);
+		lcd.print(value);
 }
 
 
