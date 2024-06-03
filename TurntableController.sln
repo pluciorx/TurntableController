@@ -5,7 +5,7 @@ VisualStudioVersion = 17.9.34723.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TurntableController", "TurntableController.vcxproj", "{788A850A-4F1B-42ED-8F6D-454D67086A85}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LCDTest", "LCDTest\LCDTest.vcxproj", "{D69828AD-B64F-4D35-9E30-B02CBEAF8386}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Testing", "Testing\Testing.vcxproj", "{D69828AD-B64F-4D35-9E30-B02CBEAF8386}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

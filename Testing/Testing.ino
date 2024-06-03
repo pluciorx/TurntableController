@@ -1,4 +1,4 @@
-#include <ezButton.h>
+﻿#include <ezButton.h>
 #include <QuickPID.h>
 #include <LiquidCrystal_I2C.h>
 #include <MX1508.h>
@@ -13,14 +13,14 @@
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
 
-ezButton btnMenuRight(PIN_BTN_RIGHT,INPUT);
-ezButton btnMenuLeft(PIN_BTN_LEFT,INPUT);
+ezButton btnMenuRight(PIN_BTN_RIGHT, INPUT);
+ezButton btnMenuLeft(PIN_BTN_LEFT, INPUT);
 ezButton btnMenuEnter(PIN_BTN_MID);
 
 //Motor
 #define PINA 9
 #define PINB 10
-MX1508 motorA(PINA, PINB, FAST_DECAY, 2);
+MX1508 motorA(PINA, PINB, SLOW_DECAY, 2);
 #define PWM_RESOLUTION 900
 
 //PID
@@ -50,7 +50,7 @@ float revPerMin = 0;
 int spotPwm[5];
 int idxSpt = 0;
 
-#define minPwm 550
+#define minPwm 545
 #define maxPwm 700
 
 #define SPD_MEASURE_INTERVAL 500 //2 seconds window - increase this if the no. of markers is less for better accuracy
@@ -61,7 +61,7 @@ int idxSpt = 0;
 enum E_STATE {
 	Idle,
 	Starting,
-	Running,	
+	Running,
 	Stopping,
 };
 
@@ -73,7 +73,7 @@ void setup() {
 	lcd.init(); // initialize the lcd	
 	lcd.backlight();
 	lcd.clear();
-	
+
 	numPulses = 0;
 	//pinMode(PINA, OUTPUT);
 	motorA.setPWM16(1, PWM_RESOLUTION); // prescaler at 1 , resolution 700, PWM frequency = 16Mhz/1/700~22000hz 
@@ -82,11 +82,11 @@ void setup() {
 	pinMode(PIN_BTN_LEFT, INPUT_PULLUP);
 	pinMode(PIN_BTN_RIGHT, INPUT_PULLUP);
 	pinMode(PIN_BTN_MID, INPUT_PULLUP);
-	
+
 	btnMenuEnter.setDebounceTime(100);
 	btnMenuLeft.setDebounceTime(50);
 	btnMenuRight.setDebounceTime(50);
-	
+
 	printSelectedSpeed(selectedSpeed);
 	//attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
 
@@ -94,20 +94,20 @@ void setup() {
 
 	curMillis = lastMillis = millis();
 	revPerMin = 0;
-	
-	SetState(E_STATE::Idle);	
+
+	SetState(E_STATE::Idle);
 }
 
 void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
 	unsigned long interrupt_time = millis();
-	
+
 	if (interrupt_time - last_interrupt_time > 10)
 	{
 		numPulses++;
 	}
 	last_interrupt_time = interrupt_time;
-	
+
 }
 
 void loop() {
@@ -122,78 +122,80 @@ void loop() {
 		while (!isPlaying)
 		{
 			updateButtons();
-						
+
 			if (btnMenuRight.isPressed()) {
-				selectedSpeed = 45;				
+				selectedSpeed = 45;
 			}
-			if (btnMenuLeft.isPressed())	{
-				selectedSpeed = 33.333; 				
+			if (btnMenuLeft.isPressed()) {
+				selectedSpeed = 33.333;
 			}
 
 			if (btnMenuEnter.isPressed())
 			{
-				
+
 				Serial.println("Play Pressed");
 				numPulses = 0;
 				revPerMin = 0;
-								
+
 				isPlaying = true;
 				
+
 				break;
-			}	
+			}
 			printSelectedSpeed(selectedSpeed);
-		}		
+		}
 		SetState(E_STATE::Starting);
 	}break;
 	case Starting:
-	{	
+	{
 		printState("    Starting    ");
 		printMeasuredSpeed(0);
-		
-		int x = 540;
-		while (x < minPwm) 
+
+		int x = 540 ;
+		while (x < minPwm)
 		{
-			
+
 			motorA.motorGo(x);
-			x++;			
-			delay(50);			
+			x++;
+			delay(50);
 		}
 		//prepare the required data
-		 revPerSecondRequired = selectedSpeed / 60;
-		 markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
-		 markersPerWindowRequired = markersPerSecondRequired * SPD_MEASURE_INTERVAL /1000;
+		revPerSecondRequired = selectedSpeed / 60;
+		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
+		markersPerWindowRequired = markersPerSecondRequired * SPD_MEASURE_INTERVAL / 1000;
 
-		 Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
-		 Serial.print("Markers per/s req:"); Serial.println(markersPerSecondRequired, 3);		 
-		 Serial.print("Window ms:"); Serial.println(SPD_MEASURE_INTERVAL);
-		 Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired,3);
-		 Serial.print("Max PWM:"); Serial.println(maxPwm);
-		 Serial.print("Min PWM:"); Serial.println(minPwm);
-		 Serial.print("Current PWM:"); Serial.println(motorA.getPWM());
-		 isPlaying = true;
-		 SetState(E_STATE::Running);
+		Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
+		Serial.print("Markers per/s req:"); Serial.println(markersPerSecondRequired, 3);
+		Serial.print("Window ms:"); Serial.println(SPD_MEASURE_INTERVAL);
+		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
+		Serial.print("Max PWM:"); Serial.println(maxPwm);
+		Serial.print("Min PWM:"); Serial.println(minPwm);
+		Serial.print("Current PWM:"); Serial.println(motorA.getPWM());
+		isPlaying = true;
+		SetState(E_STATE::Running);
 
 	}break;
 	case Running:
-	{				
+	{
 		printState("-     Speed    +");
 		printMeasuredSpeed(0);
-		
-		while (isPlaying) 
+
+		while (numPulses < NUM_MARKERS )
 		{
-			updateButtons();
 			
-			measureSpeedOnlyImpPerWindow(false);
-		
 			HandleButtonsWhilePlaying();
 
 		}
+		Serial.println("ALL markers found:"); Serial.println(numPulses);
+		numPulses = 0;
+		
+		motorA.motorGo(0);
 		SetState(E_STATE::Stopping);
 	}break;
 	case Stopping:
 	{
-		printState("    Stopping    ");		
-		
+		printState("    Stopping    ");
+
 		int currPwm = motorA.getPWM();
 		while (currPwm > 0)
 		{
@@ -201,7 +203,7 @@ void loop() {
 			if (currPwm < minPwm) currPwm = 0;
 			motorA.motorGo(currPwm--);
 			delay(100);
-			
+
 		}
 		numPulses = 0;
 		isPlaying = false;
@@ -213,31 +215,31 @@ void loop() {
 static void  measureSpeedOnlyImpPerWindow(bool isStopping)
 {
 	curMillis = millis();
-	
+
 	if (curMillis >= lastMillis + SPD_MEASURE_INTERVAL) {
 		lastMillis = curMillis;
-		
+
 		int numberOfPulses = 0;
 		// Calculate impulses per second
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 			numberOfPulses = numPulses;
 			numPulses = 0;
 		}
-		double impulsesPerSecond = numberOfPulses / ((double)SPD_MEASURE_INTERVAL /1000);
+		double impulsesPerSecond = numberOfPulses / ((double)SPD_MEASURE_INTERVAL / 1000);
 
 		// Calculate rotations per second (RPS)
 		double rotationsPerSecond = impulsesPerSecond / (double)NUM_MARKERS;
 
 		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
-		Serial.print("Pulses measured:"); Serial.println(impulsesPerSecond,3);
-		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired,3);
+		Serial.print("Pulses measured:"); Serial.println(impulsesPerSecond, 3);
+		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired, 3);
 
 		Serial.print("RPM measured:"); Serial.println(rotationsPerMinute, 3);
 
 		double deviatoon = markersPerSecondRequired - impulsesPerSecond;
-		Serial.print("Deviation:"); Serial.println(deviatoon,2);
-			
+		Serial.print("Deviation:"); Serial.println(deviatoon, 2);
+
 		printSelectedSpeed(rotationsPerMinute);
 
 		if (isStopping) return;
@@ -270,7 +272,7 @@ static void  measureSpeedOnlyImpPerWindow(bool isStopping)
 			}
 		}
 		else if (absDev > 8) isAvgFound = false;
-		
+
 		if (!isAvgFound) {
 			if (deviatoon > 1)
 			{
@@ -290,7 +292,7 @@ static void  measureSpeedOnlyImpPerWindow(bool isStopping)
 				motorA.motorGo(cap);
 			}
 		}
-		
+
 	}
 }
 
@@ -312,16 +314,16 @@ static void measureSpeedOnly(long intervalMs)
 		numPulses = 0;
 		Input = numPulses;
 		printMeasuredSpeed(revPerMin);
-		
+
 	}
 }
 
 
 void HandleButtonsWhilePlaying()
-{	
+{
 	if (btnMenuEnter.isPressed() && isPlaying)
 	{
-		Serial.println("Stop Pressed");		
+		Serial.println("Stop Pressed");
 		isPlaying = false;
 	}
 }
@@ -334,7 +336,7 @@ void updateButtons()
 }
 
 void printSelectedSpeed(double selectedSpeed)
-{	
+{
 	if (prevSelectedSpeed != selectedSpeed) {
 		char string[5];
 		// Convert float to a string:
@@ -351,7 +353,7 @@ void printSelectedSpeed(double selectedSpeed)
 
 void printMeasuredSpeed(float currenMeasuredtSpeed)
 {
-	if (prevMeasuredSpeed != currenMeasuredtSpeed )
+	if (prevMeasuredSpeed != currenMeasuredtSpeed)
 	{
 		Serial.print("Curr Speed:"); Serial.println(currenMeasuredtSpeed);
 		lcd.setCursor(6, 1);
@@ -365,12 +367,12 @@ void printMeasuredSpeed(float currenMeasuredtSpeed)
 }
 
 
-void printState(const char * text)
+void printState(const char* text)
 {
-	Serial.println(text);	
+	Serial.println(text);
 	lcd.setCursor(0, 0);
 	lcd.print("                ");
-	lcd.setCursor(0,0 );
+	lcd.setCursor(0, 0);
 	lcd.print(text);
 
 }

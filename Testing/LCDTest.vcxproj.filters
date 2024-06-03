@@ -20,11 +20,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LCDTest.ino" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="__vm\.LCDTest.vsarduino.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClCompile Include="Testing.ino" />
   </ItemGroup>
 </Project>
