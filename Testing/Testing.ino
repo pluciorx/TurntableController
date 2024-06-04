@@ -361,6 +361,7 @@ void printMeasuredSpeed(float currenMeasuredtSpeed)
 		prevMeasuredSpeed = currenMeasuredtSpeed;
 	}
 }
+
 static void printBottomLineInt(int value)
 {
 	lcd.setCursor(1, 1);
@@ -368,7 +369,6 @@ static void printBottomLineInt(int value)
 	lcd.setCursor(6, 1);
 	lcd.print(value);
 }
-
 
 void printState(const char* text)
 {
