@@ -1,8 +1,8 @@
-﻿#include <ezButton.h>
+#include <ezButton.h>
 #include <QuickPID.h>
 #include <LiquidCrystal_I2C.h>
 #include <MX1508.h>
-#include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
+#include <util/atomic.h>
 
 //IR Sensor
 #define PIN_SPD_D0 3
@@ -137,7 +137,7 @@ void loop() {
 				revPerMin = 0;
 
 				isPlaying = true;
-				
+
 
 				break;
 			}
@@ -148,10 +148,10 @@ void loop() {
 	case Starting:
 	{
 		printState("    Starting    ");
-		
+
 		motorA.motorGo(150);
 		while (numPulses < NUM_MARKERS)
-		{	
+		{
 			if (prev_numPulses != numPulses)
 			{
 				printBottomLineInt(numPulses);
@@ -161,7 +161,7 @@ void loop() {
 		Serial.println("ALL markers found:"); Serial.println(numPulses);
 		motorA.motorGo(0);
 		numPulses = 0;
-		
+
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
@@ -183,8 +183,8 @@ void loop() {
 		printState("-     Speed    +");
 		printMeasuredSpeed(0);
 
-		
-		
+
+
 		motorA.motorGo(0);
 		SetState(E_STATE::Stopping);
 	}break;
@@ -363,10 +363,10 @@ void printMeasuredSpeed(float currenMeasuredtSpeed)
 }
 static void printBottomLineInt(int value)
 {
-		lcd.setCursor(1, 1);
-		lcd.print("                ");
-		lcd.setCursor(6, 1);
-		lcd.print(value);
+	lcd.setCursor(1, 1);
+	lcd.print("                ");
+	lcd.setCursor(6, 1);
+	lcd.print(value);
 }
 
 
