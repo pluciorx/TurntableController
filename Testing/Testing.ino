@@ -6,7 +6,6 @@
 
 //IR Sensor
 #define PIN_SPD_D0 3
-#define PIN_SPD_A0 A0
 
 //Buttons
 #define PIN_BTN_LEFT 5
@@ -148,7 +147,7 @@ void loop() {
 	case Starting:
 	{
 		printState("    Starting    ");
-
+		printBottomLineInt(0);
 		motorA.motorGo(150);
 		while (numPulses < NUM_MARKERS)
 		{
