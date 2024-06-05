@@ -17,11 +17,11 @@ ezButton btnMenuLeft(PIN_BTN_LEFT, INPUT);
 ezButton btnMenuEnter(PIN_BTN_MID);
 
 //Motor
-#define PINA 9
-#define PINB 10
-#define PIN_EN 10;s
+#define PINA 10
+#define PINB 9
+
 MX1508 motorA(PINA, PINB, SLOW_DECAY, 1);
-#define PWM_RESOLUTION 900
+#define PWM_RESOLUTION 800
 
 //PID
 float Setpoint, Input, Output;
@@ -51,8 +51,8 @@ float revPerMin = 0;
 int spotPwm[5];
 int idxSpt = 0;
 
-#define minPwm 545
-#define maxPwm 700
+#define minPwm 0
+#define maxPwm 100
 
 #define SPD_MEASURE_INTERVAL 500 
 
@@ -151,7 +151,9 @@ void loop() {
 	{
 		printState("    Counting    ");
 		printBottomLineInt(0);
-		motorA.motorGo(200);
+		int pwm = 0;
+		
+
 		while (numPulses <= NUM_MARKERS)
 		{
 			if (prev_numPulses != numPulses)
@@ -159,11 +161,11 @@ void loop() {
 				printBottomLineInt(numPulses);
 			}
 			prev_numPulses = numPulses;
-		}
+		}			
 
 		Serial.println("ALL markers found:"); Serial.println(numPulses);
 		numPulses = 0;
-		
+		motorA.motorGo(0);
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
@@ -177,7 +179,7 @@ void loop() {
 		Serial.print("Min PWM:"); Serial.println(minPwm);
 		Serial.print("Current PWM:"); Serial.println(motorA.getPWM());
 		isPlaying = true;
-		SetState(E_STATE::Idle);
+		SetState(E_STATE::Stopping);
 
 	}break;
 	case Running:
