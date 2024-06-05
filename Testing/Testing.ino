@@ -153,6 +153,7 @@ void loop() {
 		printBottomLineInt(0);
 		int pwm = 0;
 		
+		motorA.motorGo(50);
 
 		while (numPulses <= NUM_MARKERS)
 		{
@@ -163,9 +164,10 @@ void loop() {
 			prev_numPulses = numPulses;
 		}			
 
+		motorA.motorGo(0);
 		Serial.println("ALL markers found:"); Serial.println(numPulses);
 		numPulses = 0;
-		motorA.motorGo(0);
+		
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
