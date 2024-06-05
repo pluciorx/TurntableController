@@ -52,7 +52,7 @@ int spotPwm[5];
 int idxSpt = 0;
 
 #define minPwm 0
-#define maxPwm 100
+#define maxPwm 150
 
 #define SPD_MEASURE_INTERVAL 500 
 
@@ -138,8 +138,6 @@ void loop() {
 				revPerMin = 0;
 
 				isPlaying = true;
-
-
 				break;
 			}
 			printSelectedSpeed(selectedSpeed);
@@ -151,22 +149,39 @@ void loop() {
 	{
 		printState("    Counting    ");
 		printBottomLineInt(0);
-		int pwm = 0;
+		long pwm = 150;
+		motorA.motorGo(pwm);
+
 		
-		motorA.motorGo(50);
 
 		while (numPulses <= NUM_MARKERS)
 		{
 			if (prev_numPulses != numPulses)
 			{
 				printBottomLineInt(numPulses);
+				if (numPulses == 54) break;
 			}
 			prev_numPulses = numPulses;
 		}			
-
 		motorA.motorGo(0);
+		motorA.stopMotor();
 		Serial.println("ALL markers found:"); Serial.println(numPulses);
-		numPulses = 0;
+	
+
+		while (1)
+		{
+			btnMenuEnter.loop();
+			if (btnMenuEnter.isPressed())
+			{ 
+				SetState(E_STATE::Starting);
+
+				numPulses = 0;
+				return;
+			}
+
+		}
+
+		
 		
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
