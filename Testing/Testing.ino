@@ -17,8 +17,8 @@ ezButton btnMenuLeft(PIN_BTN_LEFT, INPUT);
 ezButton btnMenuEnter(PIN_BTN_MID);
 
 //Motor
-#define PINA 10
-#define PINB 9
+#define PINA 9
+#define PINB 10
 
 MX1508 motorA(PINA, PINB, SLOW_DECAY, 1);
 #define PWM_RESOLUTION 800
@@ -103,7 +103,7 @@ void  interruptRoutine() {
 
 	if (interrupt_time - last_interrupt_time >5 )
 	{ 
-		if (numPulses < NUM_MARKERS) numPulses++;
+		if (numPulses < NUM_MARKERS+1) numPulses++;
 		
 	}
 	last_interrupt_time = interrupt_time;
@@ -159,22 +159,22 @@ void loop() {
 			if (prev_numPulses != numPulses)
 			{
 				printBottomLineInt(numPulses);
-				if (numPulses == 54) break;
+				
 			}
 			prev_numPulses = numPulses;
 		}			
 		motorA.motorGo(0);
-		motorA.stopMotor();
-		Serial.println("ALL markers found:"); Serial.println(numPulses);
+		//motorA.stopMotor();
+		Serial.print("ALL markers found:"); Serial.println(numPulses);
 	
-
+		 
 		while (1)
 		{
 			btnMenuEnter.loop();
 			if (btnMenuEnter.isPressed())
 			{ 
 				SetState(E_STATE::Starting);
-
+				
 				numPulses = 0;
 				return;
 			}
