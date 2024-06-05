@@ -19,7 +19,8 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 //Motor
 #define PINA 9
 #define PINB 10
-MX1508 motorA(PINA, PINB, SLOW_DECAY, 2);
+#define PIN_EN 10;s
+MX1508 motorA(PINA, PINB, SLOW_DECAY, 1);
 #define PWM_RESOLUTION 900
 
 //PID
@@ -42,8 +43,8 @@ bool isPlaying = false;
 bool isAvgFound = false;
 
 int currPWm;
-volatile unsigned long numPulses = 0;
-volatile unsigned long prev_numPulses = 0;
+volatile long numPulses = 0;
+volatile long prev_numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
@@ -87,8 +88,8 @@ void setup() {
 
 	printSelectedSpeed(selectedSpeed);
 	//attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
-
-	attachInterrupt(digitalPinToInterrupt(3), interruptRoutine, FALLING);
+	pinMode(PIN_SPD_D0, INPUT);
+	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, FALLING);
 
 	curMillis = lastMillis = millis();
 	revPerMin = 0;
@@ -100,9 +101,10 @@ void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
 	unsigned long interrupt_time = millis();
 
-	if (interrupt_time - last_interrupt_time > 8)
-	{
-		numPulses++;
+	if (interrupt_time - last_interrupt_time >5 )
+	{ 
+		if (numPulses < NUM_MARKERS) numPulses++;
+		
 	}
 	last_interrupt_time = interrupt_time;
 
@@ -142,14 +144,15 @@ void loop() {
 			}
 			printSelectedSpeed(selectedSpeed);
 		}
+		
 		SetState(E_STATE::Starting);
 	}break;
 	case Starting:
 	{
-		printState("    Starting    ");
+		printState("    Counting    ");
 		printBottomLineInt(0);
-		motorA.motorGo(150);
-		while (numPulses < NUM_MARKERS)
+		motorA.motorGo(200);
+		while (numPulses <= NUM_MARKERS)
 		{
 			if (prev_numPulses != numPulses)
 			{
@@ -157,10 +160,10 @@ void loop() {
 			}
 			prev_numPulses = numPulses;
 		}
-		Serial.println("ALL markers found:"); Serial.println(numPulses);
-		motorA.motorGo(0);
-		numPulses = 0;
 
+		Serial.println("ALL markers found:"); Serial.println(numPulses);
+		numPulses = 0;
+		
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
