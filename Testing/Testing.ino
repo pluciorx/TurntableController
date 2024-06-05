@@ -154,7 +154,7 @@ void loop() {
 
 		
 
-		while (numPulses <= NUM_MARKERS)
+		while (numPulses < NUM_MARKERS)
 		{
 			if (prev_numPulses != numPulses)
 			{
