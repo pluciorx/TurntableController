@@ -151,10 +151,8 @@ void loop() {
 		printBottomLineInt(0);
 		long pwm = 150;
 		motorA.motorGo(pwm);
-
-		
-
-		while (numPulses < NUM_MARKERS)
+		numPulses = 0;
+		while (numPulses <= NUM_MARKERS)
 		{
 			if (prev_numPulses != numPulses)
 			{
