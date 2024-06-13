@@ -153,7 +153,7 @@ void loop() {
 				else
 				{
 					_mode = (E_MODE)((int)_mode + 1);
-				}				
+				}
 				SetSelectedMode(_mode);
 			}
 
@@ -175,7 +175,7 @@ void loop() {
 		printState("    Starting    ");
 		printMeasuredSpeed(0);
 
-		int x = minPwm-10;
+		int x = minPwm - 10;
 		while (x < minPwm)
 		{
 			motorA.motorGo(x);
@@ -204,9 +204,9 @@ void loop() {
 	}break;
 	case Running:
 	{
-		printState("-     Speed    +");
+		printState("      Speed     ");
 		printMeasuredSpeed(0);
-
+		
 		while (isPlaying)
 		{
 			updateButtons();
@@ -215,16 +215,18 @@ void loop() {
 			case Auto33:
 			case Auto45:
 			{
-				measureSpeedOnlyImpPerWindow(false);				
+				
+				measureSpeedOnlyImpPerWindow(false);
 			}break;
 			case Manual: {
+				
 				if (!isAvgFound)
 				{
+					
 					measureSpeedOnlyImpPerWindow(false);
 				}
 				else {
-
-
+					
 					measureSpeedOnlyImpPerWindow(true);
 					currPWm = motorA.getPWM();
 					if (btnMenuLeft.isPressed()) {
@@ -240,7 +242,7 @@ void loop() {
 					motorA.motorGo(currPWm);
 				}
 			}
-				break;
+					   break;
 			default:
 				break;
 			}
@@ -252,7 +254,7 @@ void loop() {
 	case Stopping:
 	{
 		printState("    Stopping    ");
-		
+
 		int currPwm = motorA.getPWM();
 		while (currPwm > 0)
 		{
@@ -292,10 +294,10 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
-		
-		double devP = abs(prev_numPulses - numberOfPulses);
 
-		if (isAvgFound && devP <= 1)
+		long devP = abs(prev_numPulses - numberOfPulses);
+
+		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
 		{
 			Serial.print("Prev of Pulses:"); Serial.println(prev_numPulses);
 			Serial.println("------------ Volskwagen !---------");
@@ -304,12 +306,12 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			return;
 		}
 		prev_numPulses = numberOfPulses;
-		
+
 		Serial.print("Number of Pulses:"); Serial.println(numberOfPulses);
 		Serial.print("Pulses measured:"); Serial.println(impulsesPerSecond, 3);
 		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired, 3);
 		Serial.print("RPM measured:"); Serial.println(rotationsPerMinute, 3);
-		
+
 		printMeasuredSpeed(rotationsPerMinute);
 
 		if (displayOnly) return;
@@ -359,7 +361,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				motorA.motorGo(cap);
 
 			}
-			if (deviatoon <  0.003)
+			if (deviatoon < 0.003)
 			{
 				int adj = 1;
 				if (deviatoon <= -4) adj = abs(deviatoon / 2);
@@ -406,7 +408,7 @@ void SetSelectedMode(E_MODE selectedMode)
 	} break;
 	case Manual:
 	{
-	
+
 	}
 	break;
 	default:
@@ -441,7 +443,7 @@ void printSelectedSpeed(double selectedSpeed)
 		lcd.print("     ");
 		lcd.setCursor(6, 1);
 		lcd.print(string);
-		
+
 		switch (_mode)
 		{
 		case Auto33:
