@@ -21,7 +21,7 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 #define PINB 10
 
 MX1508 motorA(PINA, PINB, SLOW_DECAY, 1);
-#define PWM_RESOLUTION 800
+#define PWM_RESOLUTION 900
 
 //PID
 float Setpoint, Input, Output;
@@ -88,8 +88,8 @@ void setup() {
 
 	printSelectedSpeed(selectedSpeed);
 	//attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
-	pinMode(PIN_SPD_D0, INPUT);
-	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, FALLING);
+	pinMode(PIN_SPD_D0, INPUT_PULLUP);
+	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
 
 	curMillis = lastMillis = millis();
 	revPerMin = 0;
@@ -101,10 +101,9 @@ void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
 	unsigned long interrupt_time = millis();
 
-	if (interrupt_time - last_interrupt_time >5 )
+	if (interrupt_time - last_interrupt_time > 5 )
 	{ 
-		if (numPulses < NUM_MARKERS+1) numPulses++;
-		
+		numPulses++;		
 	}
 	last_interrupt_time = interrupt_time;
 
@@ -116,6 +115,7 @@ void loop() {
 	{
 	case Idle:
 	{
+		
 		printState("<-    Speed   ->");
 		isPlaying = false;
 		isAvgFound = false;
@@ -149,10 +149,10 @@ void loop() {
 	{
 		printState("    Counting    ");
 		printBottomLineInt(0);
-		long pwm = 150;
+		long pwm = 200;
 		motorA.motorGo(pwm);
 		numPulses = 0;
-		while (numPulses <= NUM_MARKERS)
+		while (numPulses < NUM_MARKERS)
 		{
 			if (prev_numPulses != numPulses)
 			{
@@ -160,7 +160,8 @@ void loop() {
 				
 			}
 			prev_numPulses = numPulses;
-		}			
+		}
+		numPulses = 0;
 		motorA.motorGo(0);
 		//motorA.stopMotor();
 		Serial.print("ALL markers found:"); Serial.println(numPulses);
@@ -178,8 +179,6 @@ void loop() {
 			}
 
 		}
-
-		
 		
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
@@ -211,7 +210,7 @@ void loop() {
 	{
 		printState("    Stopping    ");
 
-		int currPwm = motorA.getPWM();
+		long currPwm = motorA.getPWM();
 		while (currPwm > 0)
 		{
 			measureSpeedOnlyImpPerWindow(true);
