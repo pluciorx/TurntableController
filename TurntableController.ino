@@ -268,7 +268,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			numPulses = 0;
 		}
 		int devP = prev_numPulses - numberOfPulses;
-		if (isAvgFound && abs(devP) < 2) numberOfPulses = prev_numPulses;
+		if (isAvgFound && abs(devP) < 2)
+		{
+			Serial.println("Volskwagen !");
+			numberOfPulses = prev_numPulses;
+		}
 
 		double impulsesPerSecond = (double)numberOfPulses / ((double)SPD_MEASURE_INTERVAL / 1000);
 
