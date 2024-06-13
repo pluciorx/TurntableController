@@ -50,10 +50,9 @@ int idxSpt = 0;
 #define minPwm 900
 #define maxPwm 1200
 
-#define SPD_MEASURE_INTERVAL 500 //2 seconds window - increase this if the no. of markers is less for better accuracy
-// if we have 54 markers then full revolution is 55 steps 
+#define SPD_MEASURE_INTERVAL 600 //2 seconds window - increase this if the no. of markers is less for better accuracy
 
-#define NUM_MARKERS 55 //TO DO: Check this as per your setup 200
+#define NUM_MARKERS 54 //TO DO: Check this as per your setup 200
 
 enum E_STATE {
 	Idle,
