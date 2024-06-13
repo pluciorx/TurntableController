@@ -39,8 +39,9 @@ double markersPerWindowRequired = 0;
 bool isPlaying = false;
 bool isAvgFound = false;
 
+
 int currPWm;
-volatile unsigned long numPulses = 0;
+volatile unsigned long prev_numPulses, numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
@@ -120,6 +121,7 @@ void loop() {
 	case Idle:
 	{
 		printState("<-    Speed   ->");
+		printMeasuredSpeed(0);
 		isPlaying = false;
 		isAvgFound = false;
 
@@ -235,7 +237,7 @@ void loop() {
 	case Stopping:
 	{
 		printState("    Stopping    ");
-
+		
 		int currPwm = motorA.getPWM();
 		while (currPwm > 0)
 		{
@@ -265,6 +267,9 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			numberOfPulses = numPulses;
 			numPulses = 0;
 		}
+		int devP = prev_numPulses - numberOfPulses;
+		if (isAvgFound && abs(devP) < 2) numberOfPulses = prev_numPulses;
+
 		double impulsesPerSecond = (double)numberOfPulses / ((double)SPD_MEASURE_INTERVAL / 1000);
 
 		// Calculate rotations per second (RPS)
@@ -316,7 +321,8 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		else if (absDev > 8) isAvgFound = false;
 
 		if (!isAvgFound) {
-			if (deviatoon > 1)
+
+			if (deviatoon > 0.003)
 			{
 				int adj = 1;
 				if (deviatoon >= 4) adj = deviatoon / 2;
@@ -326,10 +332,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				motorA.motorGo(cap);
 
 			}
-			if (deviatoon < -1)
+			if (deviatoon <  0.003)
 			{
 				int adj = 1;
-				if (deviatoon <= -5) adj = abs(deviatoon / 2);
+				if (deviatoon <= -4) adj = abs(deviatoon / 2);
+
 				int cap = max(minPwm, motorA.getPWM() - adj);
 				motorA.motorGo(cap);
 			}
