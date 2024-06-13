@@ -48,8 +48,8 @@ float revPerMin = 0;
 int spotPwm[5];
 int idxSpt = 0;
 
-#define minPwm 900
-#define maxPwm 1200
+#define minPwm 920
+#define maxPwm 1100
 
 #define SPD_MEASURE_INTERVAL33 1200
 #define SPD_MEASURE_INTERVAL45 1136 //2 seconds window - increase this if the no. of markers is less for better accuracy
@@ -279,7 +279,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 	if (curMillis >= lastMillis + interval) {
 		lastMillis = curMillis;
 
-		int numberOfPulses = 0;
+		double numberOfPulses = 0;
 		// Calculate impulses per second
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 			numberOfPulses = numPulses;
@@ -293,13 +293,15 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 		
-		int devP = abs(impulsesPerSecond - markersPerSecondRequired);
+		double devP = abs(prev_numPulses - numberOfPulses);
 
-		if (isAvgFound && devP <= 2)
+		if (isAvgFound && devP <= 1)
 		{
 			Serial.print("Prev of Pulses:"); Serial.println(prev_numPulses);
 			Serial.println("------------ Volskwagen !---------");
 			numberOfPulses = prev_numPulses;
+			prev_numPulses = numberOfPulses;
+			return;
 		}
 		prev_numPulses = numberOfPulses;
 		
@@ -307,9 +309,6 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		Serial.print("Pulses measured:"); Serial.println(impulsesPerSecond, 3);
 		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired, 3);
 		Serial.print("RPM measured:"); Serial.println(rotationsPerMinute, 3);
-
-
-
 		
 		printMeasuredSpeed(rotationsPerMinute);
 
@@ -321,7 +320,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		currPWm = motorA.getPWM();
 		Serial.print("CurrPWM:"); Serial.println(currPWm);
 		double absDev = abs(deviatoon);
-		if (absDev <= 0.02)
+		if (absDev <= 0.02 && !isAvgFound)
 		{
 			Serial.print("Spot pwm:"); Serial.println(currPWm);
 			Serial.print("Rpm:"); Serial.println(rotationsPerMinute);
