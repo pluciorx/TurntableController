@@ -50,7 +50,7 @@ int idxSpt = 0;
 #define minPwm 900
 #define maxPwm 1200
 
-#define SPD_MEASURE_INTERVAL 600 //2 seconds window - increase this if the no. of markers is less for better accuracy
+#define SPD_MEASURE_INTERVAL 1200 //2 seconds window - increase this if the no. of markers is less for better accuracy
 
 #define NUM_MARKERS 54 //TO DO: Check this as per your setup 200
 
