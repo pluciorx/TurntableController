@@ -267,10 +267,13 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			numberOfPulses = numPulses;
 			numPulses = 0;
 		}
-		int devP = prev_numPulses - numberOfPulses;
-		if (isAvgFound && abs(devP) <= 2)
+
+		int devP = abs(prev_numPulses - numberOfPulses);
+		Serial.print("Prev of Pulses:"); Serial.println(prev_numPulses, 3);
+		if (isAvgFound && devP <= 2)
 		{
-			Serial.println("Volskwagen !");
+			Serial.print("Prev of Pulses:"); Serial.println(prev_numPulses, 3);
+			Serial.println("------------ Volskwagen !---------");
 			numberOfPulses = prev_numPulses;
 		}
 		prev_numPulses = numberOfPulses;
