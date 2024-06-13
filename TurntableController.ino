@@ -283,12 +283,12 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		if (displayOnly) return;
 
 		double deviatoon = markersPerSecondRequired - impulsesPerSecond;
-		Serial.print("Deviation:"); Serial.println(deviatoon, 2);
+		Serial.print("Deviation:"); Serial.println(deviatoon, 3);
 
 		currPWm = motorA.getPWM();
 		Serial.print("CurrPWM:"); Serial.println(currPWm);
 		double absDev = abs(deviatoon);
-		if (absDev == 0)
+		if (absDev <= 0.02)
 		{
 			Serial.print("Spot pwm:"); Serial.println(currPWm);
 			Serial.print("Rpm:"); Serial.println(rotationsPerMinute);
