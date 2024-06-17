@@ -51,7 +51,7 @@ int idxSpt = 0;
 //1200,1800 = perfect for 33.33 at 54 markers
 //1000 
 
-#define SPD_MEASURE_INTERVAL45 1350 //2 seconds window - increase this if the no. of markers is less for better accuracy
+#define SPD_MEASURE_INTERVAL45 1000 //2 seconds window - increase this if the no. of markers is less for better accuracy
 //568,1136 for (44.99) at 54 markers
 
 #define NUM_MARKERS 54 //TO DO: Check this as per your setup 200
@@ -311,10 +311,10 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
 		{
-			Serial.print("Prev of Pulses:"); Serial.println(prev_numPulses);
+			Serial.print("Prev nuber of Pulses:"); Serial.println(prev_numPulses);
 			Serial.println("------------ Volskwagen !---------");
 			numberOfPulses = prev_numPulses;
-			prev_numPulses = numberOfPulses;
+			//prev_numPulses = numberOfPulses;
 			return;
 		}
 		prev_numPulses = numberOfPulses;
