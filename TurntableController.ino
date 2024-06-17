@@ -311,7 +311,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
 		{
-			Serial.print("Prev nuber of Pulses:"); Serial.println(prev_numPulses);
+			Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
 			Serial.println("------------ Volskwagen !---------");
 			numberOfPulses = prev_numPulses;
 			//prev_numPulses = numberOfPulses;
