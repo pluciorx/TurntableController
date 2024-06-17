@@ -44,13 +44,15 @@ float revPerMin = 0;
 int spotPwm[5];
 int idxSpt = 0;
 
-#define minPwm 920
-#define maxPwm 1100
+#define minPwm 900
+#define maxPwm 1120
 
-#define SPD_MEASURE_INTERVAL33 1200
-#define SPD_MEASURE_INTERVAL45 1136 //2 seconds window - increase this if the no. of markers is less for better accuracy
-//1200,1800 = perfect for 33.33
-//568,1136 for (44.99)
+#define SPD_MEASURE_INTERVAL33 1000
+//1200,1800 = perfect for 33.33 at 54 markers
+//1000 
+
+#define SPD_MEASURE_INTERVAL45 1350 //2 seconds window - increase this if the no. of markers is less for better accuracy
+//568,1136 for (44.99) at 54 markers
 
 #define NUM_MARKERS 54 //TO DO: Check this as per your setup 200
 
@@ -105,7 +107,7 @@ void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
 	unsigned long interrupt_time = millis();
 
-	if (interrupt_time - last_interrupt_time > 5)
+	if (interrupt_time - last_interrupt_time > 3)
 	{
 		numPulses++;
 	}
