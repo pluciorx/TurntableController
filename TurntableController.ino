@@ -22,10 +22,6 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 MX1508 motorA(PINA, PINB, FAST_DECAY, 2);
 #define PWM_RESOLUTION 1200
 
-//PID
-float Setpoint, Input, Output;
-float Kp = 1, Ki = 0.0, Kd = 0.025;
-
 //LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -390,7 +386,7 @@ static void measureSpeedOnly(long intervalMs)
 		lastMillis = curMillis;
 		Serial.print("Pulses for interval:"); Serial.println(numPulses);
 		numPulses = 0;
-		Input = numPulses;
+		
 		printMeasuredSpeed(revPerMin);
 
 	}
