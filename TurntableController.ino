@@ -41,17 +41,17 @@ volatile unsigned long prev_numPulses, numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
-int spotPwm[5];
+int spotPwm[3];
 int idxSpt = 0;
 
 #define minPwm 900
 #define maxPwm 1120
 
-#define SPD_MEASURE_INTERVAL33 1000
-//1200,1800 = perfect for 33.33 at 54 markers
+#define SPD_MEASURE_INTERVAL33 500
+//500,1200,1800 = perfect for 33.33 at 54 markers
 //1000 
 
-#define SPD_MEASURE_INTERVAL45 1000 //2 seconds window - increase this if the no. of markers is less for better accuracy
+#define SPD_MEASURE_INTERVAL45 568 //2 seconds window - increase this if the no. of markers is less for better accuracy
 //568,1136 for (44.99) at 54 markers
 
 #define NUM_MARKERS 54 //TO DO: Check this as per your setup 200
@@ -307,23 +307,26 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 
-		long devP = abs(prev_numPulses - numberOfPulses);
+		double devP = abs(prev_numPulses - numberOfPulses);
+
+		Serial.print("devP:"); Serial.println(devP, 3);
 
 		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
 		{
+			
 			Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
+			
 			Serial.println("------------ Volskwagen !---------");
 			numberOfPulses = prev_numPulses;
 			//prev_numPulses = numberOfPulses;
 			return;
 		}
-		prev_numPulses = numberOfPulses;
 
-		Serial.print("Number of Pulses:"); Serial.println(numberOfPulses);
+		Serial.print("Number of Pulses:"); Serial.println(numberOfPulses,3);
 		Serial.print("Pulses measured:"); Serial.println(impulsesPerSecond, 3);
 		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired, 3);
 		Serial.print("RPM measured:"); Serial.println(rotationsPerMinute, 3);
-
+		prev_numPulses = numberOfPulses;
 		printMeasuredSpeed(rotationsPerMinute);
 
 		if (displayOnly) return;
@@ -337,15 +340,13 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		if (absDev <= 0.02 && !isAvgFound)
 		{
 			Serial.print("Spot pwm:"); Serial.println(currPWm);
-			Serial.print("Rpm:"); Serial.println(rotationsPerMinute);
-
 			spotPwm[idxSpt] = currPWm;
 			idxSpt++;
-			if (idxSpt > 4)
+			if (idxSpt > 2)
 			{
 				idxSpt = 0;
 				Serial.print("Found Average:");
-				float avg = average(spotPwm, 5);
+				float avg = average(spotPwm, sizeof(idxSpt));
 				Serial.println(avg);
 				avg = round(avg);
 				Serial.print("Round Average:");
@@ -359,11 +360,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDev > 8) isAvgFound = false;
+		else if (absDev > 1) isAvgFound = false;
 
 		if (!isAvgFound) {
 
-			if (deviatoon > 0.003)
+			if (deviatoon > 0.01)
 			{
 				int adj = 1;
 				if (deviatoon >= 4) adj = deviatoon / 2;
@@ -373,7 +374,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				motorA.motorGo(cap);
 
 			}
-			if (deviatoon < 0.003)
+			if (deviatoon < 0.01)
 			{
 				int adj = 1;
 				if (deviatoon <= -4) adj = abs(deviatoon / 2);
@@ -485,6 +486,7 @@ void printMeasuredSpeed(float currenMeasuredtSpeed)
 {
 	if (prevMeasuredSpeed != currenMeasuredtSpeed)
 	{
+		Serial.print("Measured Speed:"); Serial.println(currenMeasuredtSpeed);
 		if (abs(currenMeasuredtSpeed - selectedSpeed) <= 0.02) currenMeasuredtSpeed = selectedSpeed;
 		Serial.print("Curr Speed:"); Serial.println(currenMeasuredtSpeed);
 		lcd.setCursor(6, 1);
