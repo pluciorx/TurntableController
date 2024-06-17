@@ -212,7 +212,11 @@ void loop() {
 		case Manual: {
 			printState("-     Speed    +");
 
-		}
+		}break;
+		default: {
+
+		}break;
+				 
 		}
 	    printMeasuredSpeed(0);
 
