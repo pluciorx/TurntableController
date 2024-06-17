@@ -202,9 +202,20 @@ void loop() {
 	}break;
 	case Running:
 	{
-		printState("      Speed     ");
-		printMeasuredSpeed(0);
-		
+		switch (_mode)
+		{
+		case Auto33:
+		case Auto45:
+		{
+			printState("      Speed     ");
+		}break;
+		case Manual: {
+			printState("-     Speed    +");
+
+		}
+		}
+	    printMeasuredSpeed(0);
+
 		while (isPlaying)
 		{
 			updateButtons();
@@ -213,7 +224,6 @@ void loop() {
 			case Auto33:
 			case Auto45:
 			{
-				
 				measureSpeedOnlyImpPerWindow(false);
 			}break;
 			case Manual: {
