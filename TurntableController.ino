@@ -41,13 +41,13 @@ volatile unsigned long prev_numPulses, numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
-int spotPwm[3];
+int spotPwm[5];
 int idxSpt = 0;
 
-#define minPwm 900
+#define minPwm 950
 #define maxPwm 1120
 
-#define SPD_MEASURE_INTERVAL33 500
+#define SPD_MEASURE_INTERVAL33 1000
 //500,1200,1800 = perfect for 33.33 at 54 markers
 //1000 
 
@@ -173,12 +173,12 @@ void loop() {
 		printState("    Starting    ");
 		printMeasuredSpeed(0);
 
-		int x = minPwm - 10;
-		while (x < minPwm)
+		int x = minPwm;
+		while (x < minPwm+10)
 		{
 			motorA.motorGo(x);
-			x++;
-			delay(100);
+			x+=5;
+			delay(50);
 		}
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
@@ -272,8 +272,9 @@ void loop() {
 		{
 			measureSpeedOnlyImpPerWindow(true);
 			if (currPwm < minPwm) currPwm = 0;
+			currPwm -= 5;
 			motorA.motorGo(currPwm--);
-			delay(100);
+			delay(50);
 
 		}
 		numPulses = 0;
@@ -342,7 +343,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			Serial.print("Spot pwm:"); Serial.println(currPWm);
 			spotPwm[idxSpt] = currPWm;
 			idxSpt++;
-			if (idxSpt > 2)
+			if (idxSpt > sizeof(spotPwm)-1)
 			{
 				idxSpt = 0;
 				Serial.print("Found Average:");
