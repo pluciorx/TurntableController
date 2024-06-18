@@ -333,7 +333,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		double deviatoon = markersPerSecondRequired - impulsesPerSecond;
 		Serial.print("Deviation Markers:"); Serial.println(deviatoon, 3);
-
+		
 		currPWm = motorA.getPWM();
 		Serial.print("Current PWM:"); Serial.println(currPWm);
 		double absDev = abs(deviatoon);
@@ -358,7 +358,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDev > 1) isAvgFound = false;
+		else if (absDev > 0.5) isAvgFound = false;
 
 		if (!isAvgFound) {
 
