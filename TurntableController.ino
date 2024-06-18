@@ -337,7 +337,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		currPWm = motorA.getPWM();
 		Serial.print("Current PWM:"); Serial.println(currPWm);
 		double absDev = abs(deviatoon);
-		if (absDev <= 0.02 && !isAvgFound)
+		if (absDev <= 0.02 && abs(rotationsPerMinute - selectedSpeed) <0.01 && !isAvgFound)
 		{
 			Serial.print("Spot PWM:"); Serial.println(currPWm);
 			spotPwm[idxSpt] = currPWm;
@@ -358,7 +358,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDev > 0.5) isAvgFound = false;
+		else if (absDev > 1) isAvgFound = false;
 
 		if (!isAvgFound) {
 
