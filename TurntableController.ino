@@ -365,7 +365,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			if (deviatoon > 0.01)
 			{
 				int adj = 1;
-				if (deviatoon >= 4) adj = deviatoon / 2;
+				if (deviatoon >= 3) adj = round(deviatoon / 2);
 
 				int cap = min(maxPwm, motorA.getPWM() + adj);
 
@@ -375,7 +375,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			if (deviatoon < 0.01)
 			{
 				int adj = 1;
-				if (deviatoon <= -4) adj = abs(deviatoon / 2);
+				if (deviatoon <= -3) adj = round(abs(deviatoon / 2));
 
 				int cap = max(minPwm, motorA.getPWM() - adj);
 				motorA.motorGo(cap);
@@ -485,7 +485,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
 		
-		if (isAvgFound) {
+		if (isAvgFound && currenMeasuredSpeed == selectedSpeed) {
 
 			lcd.print("*");
 		}
