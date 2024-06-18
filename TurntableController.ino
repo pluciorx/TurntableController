@@ -42,7 +42,7 @@ volatile unsigned long prev_numPulses, numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
-int spotPwm[4];
+int spotPwm[5];
 int idxSpt = 0;
 
 #define minPwm PWM_RESOLUTION * 0.78 
@@ -311,11 +311,9 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		double devP = abs(prev_numPulses - numberOfPulses);
 
-		Serial.print("devP:"); Serial.println(devP, 3);
-
-		if (isAvgFound && devP > 0 && devP < 3) // basically 1 but for the adjustment i'll keep it that way
+		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
 		{
-			
+			Serial.print("devP:"); Serial.println(devP, 3);
 			Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
 			
 			Serial.println("------------ Volskwagen !---------");
@@ -362,7 +360,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDev > 1.5) isAvgFound = false;
+		else if (absDev > 1) isAvgFound = false;
 
 		if (!isAvgFound) {
 
@@ -474,8 +472,7 @@ void printSelectedSpeed(double selectedSpeed)
 void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
 {
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
-	{
-		
+	{		
 		if (abs(currenMeasuredSpeed - selectedSpeed) <= 0.02)
 		{
 			currenMeasuredSpeed = selectedSpeed;			
@@ -488,15 +485,15 @@ void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
 		lcd.setCursor(12, 1);		
 		lcd.print("rpm");
 
-		
 		prevMeasuredSpeed = currenMeasuredSpeed;
-	}
-	lcd.setCursor(15, 1);
-	if (isAvgFound) {
 		
-		lcd.print("*");
+		if (isAvgFound) {
+
+			lcd.print("*");
+		}
+		else lcd.print(" ");
 	}
-	else lcd.print(" ");
+
 }
 
 
