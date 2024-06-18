@@ -20,7 +20,8 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 #define PINA 9
 #define PINB 10
 MX1508 motorA(PINA, PINB, FAST_DECAY, 2);
-#define PWM_RESOLUTION 1200
+//1200
+#define PWM_RESOLUTION 2400
 
 //LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -41,11 +42,11 @@ volatile unsigned long prev_numPulses, numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 float revPerMin = 0;
-int spotPwm[5];
+int spotPwm[4];
 int idxSpt = 0;
 
-#define minPwm 950
-#define maxPwm 1120
+#define minPwm PWM_RESOLUTION * 0.78 
+#define maxPwm PWM_RESOLUTION
 
 #define SPD_MEASURE_INTERVAL33 1000
 //500,1200,1800 = perfect for 33.33 at 54 markers
@@ -121,10 +122,10 @@ void loop() {
 	{
 	case Idle:
 	{
-		printState("<-    Speed   ->");
-		printMeasuredSpeed(0);
+		printState("<-    Speed   ->");		
 		isPlaying = false;
 		isAvgFound = false;
+		printMeasuredSpeed(0, isAvgFound);
 
 		while (!isPlaying)
 		{
@@ -171,13 +172,13 @@ void loop() {
 	case Starting:
 	{
 		printState("    Starting    ");
-		printMeasuredSpeed(0);
+		printMeasuredSpeed(0,false);
 
-		int x = minPwm;
-		while (x < minPwm+10)
+		int x = minPwm-100;
+		while (x < minPwm-10)
 		{
 			motorA.motorGo(x);
-			x+=5;
+			x+=10;
 			delay(50);
 		}
 		//prepare the required data
@@ -218,7 +219,7 @@ void loop() {
 		}break;
 				 
 		}
-	    printMeasuredSpeed(0);
+	    printMeasuredSpeed(0,false);
 
 		while (isPlaying)
 		{
@@ -272,8 +273,8 @@ void loop() {
 		{
 			measureSpeedOnlyImpPerWindow(true);
 			if (currPwm < minPwm) currPwm = 0;
-			currPwm -= 5;
-			motorA.motorGo(currPwm--);
+			currPwm -= 2;
+			motorA.motorGo(currPwm);
 			delay(50);
 
 		}
@@ -312,7 +313,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		Serial.print("devP:"); Serial.println(devP, 3);
 
-		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
+		if (isAvgFound && devP > 0 && devP < 3) // basically 1 but for the adjustment i'll keep it that way
 		{
 			
 			Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
@@ -324,11 +325,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		}
 
 		Serial.print("Number of Pulses:"); Serial.println(numberOfPulses,3);
-		Serial.print("Pulses measured:"); Serial.println(impulsesPerSecond, 3);
+		Serial.print("Pulses measured per 1s:"); Serial.println(impulsesPerSecond, 3);
 		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired, 3);
 		Serial.print("RPM measured:"); Serial.println(rotationsPerMinute, 3);
 		prev_numPulses = numberOfPulses;
-		printMeasuredSpeed(rotationsPerMinute);
+		printMeasuredSpeed(rotationsPerMinute,isAvgFound);
 
 		if (displayOnly) return;
 
@@ -361,7 +362,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDev > 1) isAvgFound = false;
+		else if (absDev > 1.5) isAvgFound = false;
 
 		if (!isAvgFound) {
 
@@ -396,19 +397,6 @@ float average(int* array, int len)  // assuming array is int.
 	return  ((float)sum) / len;  // average will be fractional, so float may be appropriate.
 }
 
-static void measureSpeedOnly(long intervalMs)
-{
-	curMillis = millis();
-	if (curMillis >= lastMillis + intervalMs) {
-		float revPerMin = 60 * (numPulses / intervalMs / NUM_MARKERS);
-		lastMillis = curMillis;
-		Serial.print("Pulses for interval:"); Serial.println(numPulses);
-		numPulses = 0;
-		
-		printMeasuredSpeed(revPerMin);
-
-	}
-}
 void SetSelectedMode(E_MODE selectedMode)
 {
 	switch (selectedMode)
@@ -483,21 +471,32 @@ void printSelectedSpeed(double selectedSpeed)
 	}
 }
 
-void printMeasuredSpeed(float currenMeasuredtSpeed)
+void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
 {
-	if (prevMeasuredSpeed != currenMeasuredtSpeed)
+	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
-		Serial.print("Measured Speed:"); Serial.println(currenMeasuredtSpeed);
-		if (abs(currenMeasuredtSpeed - selectedSpeed) <= 0.02) currenMeasuredtSpeed = selectedSpeed;
-		Serial.print("Curr Speed:"); Serial.println(currenMeasuredtSpeed);
+		
+		if (abs(currenMeasuredSpeed - selectedSpeed) <= 0.02)
+		{
+			currenMeasuredSpeed = selectedSpeed;			
+		}
+		
 		lcd.setCursor(6, 1);
 		lcd.print("      ");
 		lcd.setCursor(6, 1);
-		lcd.print(currenMeasuredtSpeed);
-		lcd.setCursor(12, 1);
+		lcd.print(currenMeasuredSpeed);
+		lcd.setCursor(12, 1);		
 		lcd.print("rpm");
-		prevMeasuredSpeed = currenMeasuredtSpeed;
+
+		
+		prevMeasuredSpeed = currenMeasuredSpeed;
 	}
+	lcd.setCursor(15, 1);
+	if (isAvgFound) {
+		
+		lcd.print("*");
+	}
+	else lcd.print(" ");
 }
 
 
