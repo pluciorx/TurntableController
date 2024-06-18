@@ -310,7 +310,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 
 		double devP = abs(prev_numPulses - numberOfPulses);
-
+		Serial.println("------------ Measurements ---------");
 		if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
 		{
 			Serial.print("devP:"); Serial.println(devP, 3);
@@ -321,36 +321,34 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			//prev_numPulses = numberOfPulses;
 			return;
 		}
-
-		Serial.print("Number of Pulses:"); Serial.println(numberOfPulses,3);
-		Serial.print("Pulses measured per 1s:"); Serial.println(impulsesPerSecond, 3);
-		Serial.print("Pulses requred:"); Serial.println(markersPerSecondRequired, 3);
-		Serial.print("RPM measured:"); Serial.println(rotationsPerMinute, 3);
+		
+		Serial.print("Pulses counted:"); Serial.println(numberOfPulses,3);
+		Serial.print("Pulses counted per 1s:"); Serial.println(impulsesPerSecond, 3);
+		Serial.print("Pulses requred per 1s:"); Serial.println(markersPerSecondRequired, 3);
+		Serial.print("RPM calculated:"); Serial.println(rotationsPerMinute, 3);
 		prev_numPulses = numberOfPulses;
 		printMeasuredSpeed(rotationsPerMinute,isAvgFound);
 
 		if (displayOnly) return;
 
 		double deviatoon = markersPerSecondRequired - impulsesPerSecond;
-		Serial.print("Deviation:"); Serial.println(deviatoon, 3);
+		Serial.print("Deviation Markers:"); Serial.println(deviatoon, 3);
 
 		currPWm = motorA.getPWM();
-		Serial.print("CurrPWM:"); Serial.println(currPWm);
+		Serial.print("Current PWM:"); Serial.println(currPWm);
 		double absDev = abs(deviatoon);
 		if (absDev <= 0.02 && !isAvgFound)
 		{
-			Serial.print("Spot pwm:"); Serial.println(currPWm);
+			Serial.print("Spot PWM:"); Serial.println(currPWm);
 			spotPwm[idxSpt] = currPWm;
 			idxSpt++;
 			if (idxSpt > sizeof(spotPwm)-1)
 			{
 				idxSpt = 0;
-				Serial.print("Found Average:");
 				float avg = average(spotPwm, sizeof(idxSpt));
-				Serial.println(avg);
+				Serial.print("Found Average:"); Serial.println(avg);								
 				avg = round(avg);
-				Serial.print("Round Average:");
-				Serial.println(avg);
+				Serial.print("Round Average:"); Serial.println(avg);				
 
 				motorA.motorGo(avg);
 
