@@ -365,7 +365,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			if (deviatoon > 0.01)
 			{
 				int adj = 1;
-				if (2 >= 4) adj = deviatoon / 2;
+				if (deviatoon >= 4) adj = deviatoon / 2;
 
 				int cap = min(maxPwm, motorA.getPWM() + adj);
 
