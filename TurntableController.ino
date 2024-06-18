@@ -47,8 +47,7 @@ int idxSpt = 0;
 
 #define minPwm PWM_RESOLUTION * 0.78 
 #define maxPwm PWM_RESOLUTION
-
-#define SPD_MEASURE_INTERVAL33 1000
+#define SPD_MEASURE_INTERVAL33 500
 //500,1200,1800 = perfect for 33.33 at 54 markers
 //1000 
 
@@ -75,15 +74,13 @@ E_MODE prev_mode;
 
 void setup() {
 	Serial.begin(115200);
-	lcd.init(); // initialize the lcd	
+	lcd.init();
 	lcd.backlight();
 	lcd.clear();
 
 	numPulses = 0;
-	//pinMode(PINA, OUTPUT);
 	motorA.setPWM16(1, PWM_RESOLUTION); // prescaler at 1 , resolution 700, PWM frequency = 16Mhz/1/700~22000hz 
 
-	//pinMode(PIN_SPD_D0, ); // declare ir as input	
 	pinMode(PIN_BTN_LEFT, INPUT_PULLUP);
 	pinMode(PIN_BTN_RIGHT, INPUT_PULLUP);
 	pinMode(PIN_BTN_MID, INPUT_PULLUP);
@@ -92,10 +89,7 @@ void setup() {
 	btnMenuLeft.setDebounceTime(50);
 	btnMenuRight.setDebounceTime(50);
 
-	printSelectedSpeed(selectedSpeed);
-	//attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
-
-	attachInterrupt(digitalPinToInterrupt(3), interruptRoutine, FALLING);
+	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, FALLING);
 
 	curMillis = lastMillis = millis();
 	revPerMin = 0;
@@ -113,7 +107,6 @@ void  interruptRoutine() {
 		numPulses++;
 	}
 	last_interrupt_time = interrupt_time;
-
 }
 
 void loop() {
