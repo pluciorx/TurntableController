@@ -319,12 +319,8 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		if (displayOnly) return;
 
-		
-		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);
-		
+		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);		
 		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
-
-		
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
 
 		currPWm = motorA.getPWM();
@@ -347,7 +343,12 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDevMarkers > 2) isAvgFound = false;
+		else if (absDevMarkers > 2)
+		{
+			isAvgFound = false;
+			memset(spotPwm, 0, sizeof(spotPwm));
+			idxSpt = 0;
+		}
 
 		if (!isAvgFound) {
 
