@@ -41,10 +41,10 @@ int spotPwm[5];
 int idxSpt = 0;
 
 #define PWM_RESOLUTION 8000
-#define minPwm PWM_RESOLUTION * 0.77 
+#define minPwm PWM_RESOLUTION * 0.74 
 #define maxPwm PWM_RESOLUTION
-#define SPD_MEASURE_INTERVAL33 1560
-//1040 for 180
+#define SPD_MEASURE_INTERVAL33 1040
+//1040 1560 for 180
 //1000 
 
 #define SPD_MEASURE_INTERVAL45 1137 //2 seconds window - increase this if the no. of markers is less for better accuracy
@@ -287,20 +287,24 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 
-		double devP = abs(markersPerWindowRequired - numberOfPulses);
+		int markersRequiredRounded = round(markersPerWindowRequired);
+		int deviatoonMarkers = numberOfPulses - markersRequiredRounded;
+		
+		numPulses = 0;
+		int absDevMarkers = abs(deviatoonMarkers);
+		float devSpd = abs(rotationsPerMinute - selectedSpeed);
+
 		Serial.println("");
-		//if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
+
+		//if (isAvgFound &&  absDevMarkers < 2) // basically 1 but for the adjustment i'll keep it that way
 		//{
-		//	Serial.print("devP:"); Serial.println(devP);
-		//	Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
-		//	
 		//	Serial.println("------------ Volskwagen !---------");
-		//	//numPulses = prev_numPulses;
+		//	numPulses = prev_numPulses;
 		//	//prev_numPulses = numberOfPulses;
 		//	return;
 		//}
 
-		int markersRequiredRounded = round(markersPerWindowRequired);
+		
 		Serial.print(F("Pulses required per interval:")); Serial.println(markersPerWindowRequired, 3);
 		
 		Serial.print(F("Pulses round per interval:")); Serial.println(markersRequiredRounded);
@@ -315,20 +319,18 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		if (displayOnly) return;
 
-		int deviatoon = numberOfPulses - markersRequiredRounded;
+		
+		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);
+		
+		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
 
-		numPulses = 0;
-		Serial.print(F("Deviation pulses:")); Serial.println(deviatoon);
-		int absDev = abs(deviatoon);
-		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDev);
-
-		float devSpd = abs(rotationsPerMinute - selectedSpeed);
+		
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
 
 		currPWm = motorA.getPWM();
 		Serial.print(F("Current PWM:")); Serial.println(currPWm);
 		
-		if (absDev < 2  && devSpd < 0.02 && !isAvgFound)
+		if (absDevMarkers <= 1  && !isAvgFound)
 		{
 			Serial.print("Spot PWM:"); Serial.println(currPWm);
 			spotPwm[idxSpt] = currPWm;
@@ -338,8 +340,6 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				idxSpt = 0;
 				float avg = average(spotPwm, sizeof(idxSpt));
 				Serial.print("Found Average:"); Serial.println(avg);								
-				avg = round(avg);
-				Serial.print("Round Average:"); Serial.println(avg);				
 
 				motorA.motorGo(avg);
 				isAvgFound = true;
@@ -347,24 +347,24 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				return;
 			}
 		}
-		else if (absDev > 10) isAvgFound = false;
+		else if (absDevMarkers > 2) isAvgFound = false;
 
 		if (!isAvgFound) {
 
-			if (deviatoon > 1)
+			if (deviatoonMarkers > 1)
 			{
 				int adj = 1;
-				if (deviatoon >= 4) adj = deviatoon;
+				if (deviatoonMarkers >= 4) adj = deviatoonMarkers;
 
 				int cap = min(maxPwm, motorA.getPWM() - adj);
 
 				motorA.motorGo(cap);
 
 			}
-			if (deviatoon < -1)
+			if (deviatoonMarkers < -1)
 			{
 				int adj = 1;
-				if (deviatoon <= -4) adj = absDev;
+				if (deviatoonMarkers <= -4) adj = absDevMarkers;
 
 				int cap = max(minPwm, motorA.getPWM() + adj);
 				motorA.motorGo(cap);
@@ -460,7 +460,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
 {
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{		
-		if (abs(currenMeasuredSpeed - selectedSpeed) <= 0.02)
+		if (abs(currenMeasuredSpeed - selectedSpeed) <= 0.4)
 		{
 			currenMeasuredSpeed = selectedSpeed;			
 		}
