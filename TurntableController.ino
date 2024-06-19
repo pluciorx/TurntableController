@@ -20,37 +20,34 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 #define PINA 9
 #define PINB 10
 MX1508 motorA(PINA, PINB, FAST_DECAY, 2);
-//1200
-#define PWM_RESOLUTION 8191
 
-//LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-double selectedSpeed = 33.33;
-
-double prevMeasuredSpeed = -1;
-double revPerSecondRequired = 0;
-double markersPerSecondRequired = 0;
-double markersPerWindowRequired = 0;
+float selectedSpeed = 33.33;
+float prevMeasuredSpeed = -1;
+float revPerSecondRequired = 0.0;
+float markersPerSecondRequired = 0.0;
+float markersPerWindowRequired = 0.0;
 
 bool isPlaying = false;
 bool isAvgFound = false;
 
 int currPWm;
-volatile unsigned long prev_numPulses, numPulses = 0;
+volatile unsigned int prev_numPulses, numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
-float revPerMin = 0;
+
 int spotPwm[5];
 int idxSpt = 0;
 
-#define minPwm PWM_RESOLUTION * 0.78 
+#define PWM_RESOLUTION 8000
+#define minPwm PWM_RESOLUTION * 0.77 
 #define maxPwm PWM_RESOLUTION
-#define SPD_MEASURE_INTERVAL33 900
-//500,1200,1800 = perfect for 33.33 at 54 markers
+#define SPD_MEASURE_INTERVAL33 1560
+//1040 for 180
 //1000 
 
-#define SPD_MEASURE_INTERVAL45 1136 //2 seconds window - increase this if the no. of markers is less for better accuracy
+#define SPD_MEASURE_INTERVAL45 1137 //2 seconds window - increase this if the no. of markers is less for better accuracy
 //568,1136 for (44.99) at 54 markers
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
@@ -91,7 +88,6 @@ void setup() {
 	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, FALLING);
 
 	curMillis = lastMillis = millis();
-	revPerMin = 0;
 	_mode = E_MODE::Auto33;
 	prev_mode = E_MODE::Auto45;
 	SetState(E_STATE::Idle);
@@ -152,7 +148,6 @@ void loop() {
 			{
 				Serial.println("Play Pressed");
 				numPulses = 0;
-				revPerMin = 0;
 				isPlaying = true;
 				break;
 			}
@@ -177,10 +172,10 @@ void loop() {
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
 
-		int interval = SPD_MEASURE_INTERVAL33;
+		int interval;
 		if (selectedSpeed == 33.33) interval = SPD_MEASURE_INTERVAL33;
 		if (selectedSpeed == 45) interval = SPD_MEASURE_INTERVAL45;
-		markersPerWindowRequired = markersPerSecondRequired * interval / 1000.0;
+		markersPerWindowRequired = markersPerSecondRequired * (interval / 1000.0);
 
 		Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
 		Serial.print("Markers per/s req:"); Serial.println(markersPerSecondRequired, 3);
@@ -276,50 +271,64 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 	if (curMillis >= lastMillis + interval) {
 		lastMillis = curMillis;
+		
+		int numberOfPulses = 0;
 
-		double numberOfPulses = 0;
-	
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 			numberOfPulses = numPulses;
 			numPulses = 0;
 		}
+
 		// Calculate impulses per second
-		double impulsesPerSecond = (double)numberOfPulses / ((double)interval / 1000);
+		double impulsesPerSecond = numberOfPulses / (interval / 1000.0);
 		// Calculate rotations per second (RPS)
-		double rotationsPerSecond = impulsesPerSecond / (double)NUM_MARKERS;
+		double rotationsPerSecond = impulsesPerSecond / NUM_MARKERS;
 
 		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 
-		double devP = abs(prev_numPulses - numberOfPulses);
-		Serial.println("------------ Measurements ---------");
-		if (isAvgFound && devP > 0 && devP < 3) // basically 1 but for the adjustment i'll keep it that way
-		{
-			Serial.print("devP:"); Serial.println(devP, 3);
-			Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
-			
-			Serial.println("------------ Volskwagen !---------");
-			numberOfPulses = prev_numPulses;
-			//prev_numPulses = numberOfPulses;
-			return;
-		}
+		double devP = abs(markersPerWindowRequired - numberOfPulses);
+		Serial.println("");
+		//if (isAvgFound && devP > 0 && devP < 2) // basically 1 but for the adjustment i'll keep it that way
+		//{
+		//	Serial.print("devP:"); Serial.println(devP);
+		//	Serial.print("Prev number of Pulses:"); Serial.println(prev_numPulses);
+		//	
+		//	Serial.println("------------ Volskwagen !---------");
+		//	//numPulses = prev_numPulses;
+		//	//prev_numPulses = numberOfPulses;
+		//	return;
+		//}
+
+		int markersRequiredRounded = round(markersPerWindowRequired);
+		Serial.print(F("Pulses required per interval:")); Serial.println(markersPerWindowRequired, 3);
 		
-		Serial.print("Pulses counted:"); Serial.println(numberOfPulses,3);
-		Serial.print("Pulses counted per 1s:"); Serial.println(impulsesPerSecond, 3);
-		Serial.print("Pulses requred per 1s:"); Serial.println(markersPerSecondRequired, 3);
-		Serial.print("RPM calculated:"); Serial.println(rotationsPerMinute, 3);
+		Serial.print(F("Pulses round per interval:")); Serial.println(markersRequiredRounded);
+		Serial.print(F("Pulses counted per interval:")); Serial.println(numberOfPulses);
+
+		Serial.print(F("Pulses requred per 1s:")); Serial.println(markersPerSecondRequired, 3);
+		Serial.print(F("Pulses counted per 1s:")); Serial.println(impulsesPerSecond, 3);		
+		Serial.print(F("RPM calculated:")); Serial.println(rotationsPerMinute, 3);
 		prev_numPulses = numberOfPulses;
+		
 		printMeasuredSpeed(rotationsPerMinute,isAvgFound);
 
 		if (displayOnly) return;
 
-		double deviatoon = markersPerSecondRequired - impulsesPerSecond;
-		Serial.print("Deviation Markers:"); Serial.println(deviatoon, 3);
-		
+		int deviatoon = numberOfPulses - markersRequiredRounded;
+
+		numPulses = 0;
+		Serial.print(F("Deviation pulses:")); Serial.println(deviatoon);
+		int absDev = abs(deviatoon);
+		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDev);
+
+		float devSpd = abs(rotationsPerMinute - selectedSpeed);
+		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
+
 		currPWm = motorA.getPWM();
-		Serial.print("Current PWM:"); Serial.println(currPWm);
-		double absDev = abs(deviatoon);
-		if (absDev <= 0.02 && abs(rotationsPerMinute - selectedSpeed) <0.02 && !isAvgFound)
+		Serial.print(F("Current PWM:")); Serial.println(currPWm);
+		
+		if (absDev < 2  && devSpd < 0.02 && !isAvgFound)
 		{
 			Serial.print("Spot PWM:"); Serial.println(currPWm);
 			spotPwm[idxSpt] = currPWm;
@@ -333,33 +342,31 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				Serial.print("Round Average:"); Serial.println(avg);				
 
 				motorA.motorGo(avg);
-
-				numPulses = 0;
 				isAvgFound = true;
 
 				return;
 			}
 		}
-		else if (absDev > 1) isAvgFound = false;
+		else if (absDev > 10) isAvgFound = false;
 
 		if (!isAvgFound) {
 
-			if (deviatoon > 0.02)
+			if (deviatoon > 1)
 			{
 				int adj = 1;
-				if (deviatoon >= 2) adj = round(deviatoon / 2);
+				if (deviatoon >= 4) adj = deviatoon;
 
-				int cap = min(maxPwm, motorA.getPWM() + adj);
+				int cap = min(maxPwm, motorA.getPWM() - adj);
 
 				motorA.motorGo(cap);
 
 			}
-			if (deviatoon < -0.02)
+			if (deviatoon < -1)
 			{
 				int adj = 1;
-				if (deviatoon <= -2) adj = round(abs(deviatoon / 2));
+				if (deviatoon <= -4) adj = absDev;
 
-				int cap = max(minPwm, motorA.getPWM() - adj);
+				int cap = max(minPwm, motorA.getPWM() + adj);
 				motorA.motorGo(cap);
 			}
 		}
