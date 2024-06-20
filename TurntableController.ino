@@ -39,8 +39,8 @@ unsigned long curMillis = 0;
 int spotPwm[5];
 int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 3
-#define PWM_RESOLUTION 16000
-#define minPwm PWM_RESOLUTION * 0.75 
+#define PWM_RESOLUTION 800
+#define minPwm PWM_RESOLUTION * 0.5 
 #define maxPwm PWM_RESOLUTION
 
 int intervalFor33 = 1040;
@@ -343,10 +343,10 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				
 				if (deviatoonMarkers > MAX_DEVITATION_MARKERS)
 				{
-					adj = deviatoonMarkers;
+					adj = deviatoonMarkers/2;
 				}
 
-				int cap = min(maxPwm, motorA.getPWM() - adj);
+				int cap = max(minPwm, motorA.getPWM() - adj);
 
 				motorA.motorGo(cap);
 
@@ -354,9 +354,9 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			if (deviatoonMarkers < -1)
 			{
 				int adj = 1;
-				if (deviatoonMarkers < -MAX_DEVITATION_MARKERS) adj = absDevMarkers;
+				if (deviatoonMarkers < -MAX_DEVITATION_MARKERS) adj = absDevMarkers/2;
 
-				int cap = max(minPwm, motorA.getPWM() + adj);
+				int cap = min(maxPwm, motorA.getPWM() + adj);
 				motorA.motorGo(cap);
 			}
 			
