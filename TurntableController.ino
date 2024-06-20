@@ -161,12 +161,12 @@ void loop() {
 		printState("    Starting    ");
 		printMeasuredSpeed(0,false);
 
-		int x = minPwm;
-		while (x < minPwm+50)
+		int x = minPwm+10;
+		while (x < minPwm+110)
 		{
 			motorA.motorGo(x);
-			x+=5;
-			delay(20);
+			x+=50;
+			delay(250);
 		}
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
@@ -224,7 +224,7 @@ void loop() {
 					}
 					else 
 					{					
-						measureSpeedOnlyImpPerWindow(true);
+						
 						currPWm = motorA.getPWM();
 						if (btnMenuLeft.isPressed()) {
 							Serial.print("New pwm:"); Serial.println(currPWm--);
@@ -234,6 +234,7 @@ void loop() {
 							Serial.print("New pwm:"); Serial.println(currPWm++);
 						}
 						motorA.motorGo(currPWm);
+						measureSpeedOnlyImpPerWindow(true);
 					}
 				}break;			
 			}
@@ -247,7 +248,7 @@ void loop() {
 
 		int currPwm = motorA.getPWM();
 		while (currPwm > 0)
-		{
+		{ 
 			measureSpeedOnlyImpPerWindow(true);
 			if (currPwm < minPwm) currPwm = 0;
 			currPwm -= 20;
@@ -291,9 +292,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		int absDevMarkers = abs(deviatoonMarkers);
 		float devSpd = abs(rotationsPerMinute - selectedSpeed);		
 				
-		printMeasuredSpeed(rotationsPerMinute,isAvgFound);
-
-		if (displayOnly) return;
+		printMeasuredSpeed(rotationsPerMinute,isAvgFound);	
 
 		Serial.println("");
 
@@ -309,6 +308,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		currPWm = motorA.getPWM();
 		Serial.print(F("Current PWM:")); Serial.println(currPWm);		
+		if (displayOnly) return;
 
 		if (absDevMarkers == 0  && !isAvgFound)
 		{
@@ -320,7 +320,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				idxSpt = 0;
 				int avg = average(spotPwm, sizeof(idxSpt));
 				Serial.print(F("Found Average:")); Serial.println(avg);								
-
+			
 				motorA.motorGo(avg);
 				isAvgFound = true;
 
@@ -340,10 +340,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			if (deviatoonMarkers > 1)
 			{
 				int adj = 1;
-				if (deviatoonMarkers > MAX_DEVITATION_MARKERS*4)
-				{
-					
-				}
+				
 				if (deviatoonMarkers > MAX_DEVITATION_MARKERS)
 				{
 					adj = deviatoonMarkers;
