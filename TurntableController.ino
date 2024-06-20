@@ -251,7 +251,7 @@ void loop() {
 		{
 			measureSpeedOnlyImpPerWindow(true);
 			if (currPwm < minPwm) currPwm = 0;
-			currPwm -= 8;
+			currPwm -= 20;
 			motorA.motorGo(currPwm);
 			delay(50);
 		}
