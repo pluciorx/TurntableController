@@ -40,7 +40,7 @@ int spotPwm[5];
 int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 3
 #define PWM_RESOLUTION 16000
-#define minPwm PWM_RESOLUTION * 0.78 
+#define minPwm PWM_RESOLUTION * 0.75 
 #define maxPwm PWM_RESOLUTION
 
 int intervalFor33 = 1040;
