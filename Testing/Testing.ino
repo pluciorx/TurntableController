@@ -5,7 +5,7 @@
 #include <util/atomic.h>
 
 //IR Sensor
-#define PIN_SPD_D0 3
+#define PIN_SENSOR 3
 
 //Buttons
 #define PIN_BTN_LEFT 5
@@ -43,7 +43,7 @@ bool isPlaying = false;
 bool isAvgFound = false;
 
 int currPWm;
-volatile long numPulses = 0;
+volatile long markersPerWindowActual = 0;
 volatile long prev_numPulses = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
@@ -73,7 +73,7 @@ void setup() {
 	lcd.backlight();
 	lcd.clear();
 
-	numPulses = 0;
+	markersPerWindowActual = 0;
 	//pinMode(PINA, OUTPUT);
 	motorA.setPWM16(1, PWM_RESOLUTION); // prescaler at 1 , resolution 700, PWM frequency = 16Mhz/1/700~22000hz 
 
@@ -88,8 +88,8 @@ void setup() {
 
 	printSelectedSpeed(selectedSpeed);
 	//attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
-	pinMode(PIN_SPD_D0, INPUT_PULLUP);
-	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, RISING);
+	pinMode(PIN_SENSOR, INPUT_PULLUP);
+	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
 	curMillis = lastMillis = millis();
 	revPerMin = 0;
@@ -103,7 +103,7 @@ void  interruptRoutine() {
 
 	if (interrupt_time - last_interrupt_time > 5 )
 	{ 
-		numPulses++;		
+		markersPerWindowActual++;		
 	}
 	last_interrupt_time = interrupt_time;
 
@@ -134,7 +134,7 @@ void loop() {
 			{
 
 				Serial.println("Play Pressed");
-				numPulses = 0;
+				markersPerWindowActual = 0;
 				revPerMin = 0;
 
 				isPlaying = true;
@@ -151,20 +151,20 @@ void loop() {
 		printBottomLineInt(0);
 		long pwm = 200;
 		motorA.motorGo(pwm);
-		numPulses = 0;
-		while (numPulses < NUM_MARKERS)
+		markersPerWindowActual = 0;
+		while (markersPerWindowActual < NUM_MARKERS)
 		{
-			if (prev_numPulses != numPulses)
+			if (prev_numPulses != markersPerWindowActual)
 			{
-				printBottomLineInt(numPulses);
+				printBottomLineInt(markersPerWindowActual);
 				
 			}
-			prev_numPulses = numPulses;
+			prev_numPulses = markersPerWindowActual;
 		}
-		numPulses = 0;
+		markersPerWindowActual = 0;
 		motorA.motorGo(0);
 		//motorA.stopMotor();
-		Serial.print("ALL markers found:"); Serial.println(numPulses);
+		Serial.print("ALL markers found:"); Serial.println(markersPerWindowActual);
 	
 		 
 		while (1)
@@ -174,7 +174,7 @@ void loop() {
 			{ 
 				SetState(E_STATE::Starting);
 				
-				numPulses = 0;
+				markersPerWindowActual = 0;
 				return;
 			}
 
@@ -219,7 +219,7 @@ void loop() {
 			delay(100);
 
 		}
-		numPulses = 0;
+		markersPerWindowActual = 0;
 		isPlaying = false;
 		SetState(E_STATE::Idle);
 	}
@@ -236,8 +236,8 @@ static void  measureSpeedOnlyImpPerWindow(bool isStopping)
 		int numberOfPulses = 0;
 		// Calculate impulses per second
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-			numberOfPulses = numPulses;
-			numPulses = 0;
+			numberOfPulses = markersPerWindowActual;
+			markersPerWindowActual = 0;
 		}
 		double impulsesPerSecond = numberOfPulses / ((double)SPD_MEASURE_INTERVAL / 1000);
 
@@ -279,7 +279,7 @@ static void  measureSpeedOnlyImpPerWindow(bool isStopping)
 
 				motorA.motorGo(avg);
 
-				numPulses = 0;
+				markersPerWindowActual = 0;
 				isAvgFound = true;
 
 				return;
@@ -322,11 +322,11 @@ static void measureSpeedOnly(long intervalMs)
 {
 	curMillis = millis();
 	if (curMillis >= lastMillis + intervalMs) {
-		float revPerMin = 60 * (numPulses / intervalMs / NUM_MARKERS);
+		float revPerMin = 60 * (markersPerWindowActual / intervalMs / NUM_MARKERS);
 		lastMillis = curMillis;
-		Serial.print("Pulses for interval:"); Serial.println(numPulses);
-		numPulses = 0;
-		Input = numPulses;
+		Serial.print("Pulses for interval:"); Serial.println(markersPerWindowActual);
+		markersPerWindowActual = 0;
+		Input = markersPerWindowActual;
 		printMeasuredSpeed(revPerMin);
 
 	}

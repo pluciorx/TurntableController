@@ -4,8 +4,7 @@
 #include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
 
 //IR Sensor
-#define PIN_SPD_D0 3
-#define PIN_SPD_A0 A0
+#define PIN_SENSOR 2
 
 //Buttons
 #define PIN_BTN_LEFT 5
@@ -33,7 +32,7 @@ bool isPlaying = false;
 bool isAvgFound = false;
 
 int currPWm;
-volatile unsigned int numPulses = 0;
+volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
@@ -43,12 +42,12 @@ int idxSpt = 0;
 #define PWM_RESOLUTION 16000
 #define minPwm PWM_RESOLUTION * 0.78 
 #define maxPwm PWM_RESOLUTION
-#define SPD_MEASURE_INTERVAL33 1040
-//1040 1560 for 180
-//1000 
 
-#define SPD_MEASURE_INTERVAL45 1137 //2 seconds window - increase this if the no. of markers is less for better accuracy
+int intervalFor33 = 1040;
+//1040 1560 for 180
+int intervalFor45 = 1137; //2 seconds window - increase this if the no. of markers is less for better accuracy
 //568,1136 for (44.99) at 54 markers
+int measureInterval = intervalFor33; //just a default setting
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
 
@@ -74,7 +73,7 @@ void setup() {
 	lcd.backlight();
 	lcd.clear();
 
-	numPulses = 0;
+	markersPerWindowActual = 0;
 	motorA.setPWM16(1, PWM_RESOLUTION); // prescaler at 1 , resolution 700, PWM frequency = 16Mhz/1/700~22000hz 
 
 	pinMode(PIN_BTN_LEFT, INPUT_PULLUP);
@@ -85,7 +84,8 @@ void setup() {
 	btnMenuLeft.setDebounceTime(50);
 	btnMenuRight.setDebounceTime(50);
 
-	attachInterrupt(digitalPinToInterrupt(PIN_SPD_D0), interruptRoutine, FALLING);
+	pinMode(PIN_SENSOR, INPUT_PULLUP);
+	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
 	curMillis = lastMillis = millis();
 	_mode = E_MODE::Auto33;
@@ -99,7 +99,7 @@ void  interruptRoutine() {
 
 	if (interrupt_time - last_interrupt_time > 4)
 	{
-		numPulses++;
+		markersPerWindowActual++;
 	}
 	last_interrupt_time = interrupt_time;
 }
@@ -147,7 +147,7 @@ void loop() {
 			if (btnMenuEnter.isPressed())
 			{
 				Serial.println("Play Pressed");
-				numPulses = 0;
+				markersPerWindowActual = 0;
 				isPlaying = true;
 				break;
 			}
@@ -161,25 +161,24 @@ void loop() {
 		printState("    Starting    ");
 		printMeasuredSpeed(0,false);
 
-		int x = minPwm-100;
-		while (x < minPwm-10)
+		int x = minPwm;
+		while (x < minPwm+50)
 		{
 			motorA.motorGo(x);
 			x+=5;
-			delay(50);
+			delay(20);
 		}
 		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
-
-		int interval;
-		if (selectedSpeed == 33.33) interval = SPD_MEASURE_INTERVAL33;
-		if (selectedSpeed == 45) interval = SPD_MEASURE_INTERVAL45;
-		markersPerWindowRequired = markersPerSecondRequired * (interval / 1000.0);
+	
+		if (selectedSpeed == 33.33) measureInterval = intervalFor33;
+		if (selectedSpeed == 45) measureInterval = intervalFor45;
+		markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
 
 		Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
 		Serial.print("Markers per/s req:"); Serial.println(markersPerSecondRequired, 3);
-		Serial.print("Window ms:"); Serial.println(interval);
+		Serial.print("Measure Interval ms:"); Serial.println(measureInterval);
 		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
 		Serial.print("Max PWM:"); Serial.println(maxPwm);
 		Serial.print("Min PWM:"); Serial.println(minPwm);
@@ -219,7 +218,7 @@ void loop() {
 					measureSpeedOnlyImpPerWindow(false);
 				}break;
 				case Manual: {					
-					if (!isAvgFound)
+					if (abs(markersPerWindowRequired - markersPerWindowActual) > 20 )
 					{
 						measureSpeedOnlyImpPerWindow(false);
 					}
@@ -255,7 +254,7 @@ void loop() {
 			motorA.motorGo(currPwm);
 			delay(50);
 		}
-		numPulses = 0;
+		markersPerWindowActual = 0;
 		isPlaying = false;
 		SetState(E_STATE::Idle);
 	}
@@ -264,23 +263,21 @@ void loop() {
 
 static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 {
+	
 	curMillis = millis();
-	int interval = SPD_MEASURE_INTERVAL33;
-	if (selectedSpeed == 33.33) interval = SPD_MEASURE_INTERVAL33;
-	if (selectedSpeed == 45) interval = SPD_MEASURE_INTERVAL45;
 
-	if (curMillis >= lastMillis + interval) {
+	if (curMillis >= lastMillis + measureInterval) {
 		lastMillis = curMillis;
 		
 		int numberOfPulses = 0;
 
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-			numberOfPulses = numPulses;
-			numPulses = 0;
+			numberOfPulses = markersPerWindowActual;
+			markersPerWindowActual = 0;
 		}
 
 		// Calculate impulses per second
-		double impulsesPerSecond = numberOfPulses / (interval / 1000.0);
+		double impulsesPerSecond = numberOfPulses / (measureInterval / 1000.0);
 		// Calculate rotations per second (RPS)
 		double rotationsPerSecond = impulsesPerSecond / NUM_MARKERS;
 
@@ -290,26 +287,22 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		int markersRequiredRounded = round(markersPerWindowRequired);
 		int deviatoonMarkers = numberOfPulses - markersRequiredRounded;
 		
-		numPulses = 0;
+		markersPerWindowActual = 0;
 		int absDevMarkers = abs(deviatoonMarkers);
-		float devSpd = abs(rotationsPerMinute - selectedSpeed);
-
-		Serial.println("");
-		
-		Serial.print(F("Pulses required per interval:")); Serial.println(markersPerWindowRequired, 3);
-		
-		Serial.print(F("Pulses round per interval:")); Serial.println(markersRequiredRounded);
-		Serial.print(F("Pulses counted per interval:")); Serial.println(numberOfPulses);
-
-		Serial.print(F("Pulses requred per 1s:")); Serial.println(markersPerSecondRequired, 3);
-		Serial.print(F("Pulses counted per 1s:")); Serial.println(impulsesPerSecond, 3);		
-		Serial.print(F("RPM calculated:")); Serial.println(rotationsPerMinute, 3);
-		
-		
+		float devSpd = abs(rotationsPerMinute - selectedSpeed);		
+				
 		printMeasuredSpeed(rotationsPerMinute,isAvgFound);
 
 		if (displayOnly) return;
 
+		Serial.println("");
+
+		Serial.print(F("Markers required per interval:")); Serial.println(markersPerWindowRequired, 3);
+		Serial.print(F("Markers round per interval:")); Serial.println(markersRequiredRounded);
+		Serial.print(F("Markers counted per interval:")); Serial.println(numberOfPulses);
+		Serial.print(F("Markers requred per 1s:")); Serial.println(markersPerSecondRequired, 3);
+		Serial.print(F("Markers counted per 1s:")); Serial.println(impulsesPerSecond, 3);
+		Serial.print(F("RPM calculated:")); Serial.println(rotationsPerMinute, 3);
 		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);		
 		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
@@ -342,13 +335,19 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			idxSpt = 0;
 		}
 		
-
 		if (!isAvgFound) {
 
 			if (deviatoonMarkers > 1)
 			{
 				int adj = 1;
-				if (deviatoonMarkers > MAX_DEVITATION_MARKERS) adj = deviatoonMarkers;
+				if (deviatoonMarkers > MAX_DEVITATION_MARKERS*4)
+				{
+					
+				}
+				if (deviatoonMarkers > MAX_DEVITATION_MARKERS)
+				{
+					adj = deviatoonMarkers;
+				}
 
 				int cap = min(maxPwm, motorA.getPWM() - adj);
 
@@ -364,8 +363,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				motorA.motorGo(cap);
 			}
 			
-		}
-
+		}		
 	}
 }
 
