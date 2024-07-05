@@ -39,18 +39,19 @@ int idxSpt = 0;
 #define POT1 0x11
 
 #define pot33 184
-#define pot45 195
+#define pot45 200
 
 #define minPOT 172
 #define maxPOT 205
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 530; //perfect for 9V 
-//520
+int intervalFor33 = 530; 
+//530
 //1560
 
-int intervalFor45 = 540; //2 seconds window - increase this if the no. of markers is less for better accuracy
+int intervalFor45 = 600; //2 seconds window - increase this if the no. of markers is less for better accuracy
+//600ms  = exactly 81 markers required
 
 int measureInterval = intervalFor33; //just a default setting
 
