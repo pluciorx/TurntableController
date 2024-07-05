@@ -39,14 +39,15 @@ int idxSpt = 0;
 
 
 
-#define pot33 180
+#define pot33 183
 #define pot45 195
 
 #define minPOT 168
 #define maxPOT 205
 volatile int currentP1Val;
 volatile int currentP0Val;
-int intervalFor33 = 520; //perfect for 9V
+int intervalFor33 = 530; //perfect for 9V 
+//520
 //1560
 
 int intervalFor45 = 540; //2 seconds window - increase this if the no. of markers is less for better accuracy
@@ -169,7 +170,8 @@ void loop() {
 
 		int x = minPOT;
 		setSpedForP1(maxPOT);
-		delay(3500);
+		delay(1500);
+		printState("   Stabilising   ");
 		int target;
 		switch (_mode)
 		{
@@ -207,21 +209,20 @@ void loop() {
 		Serial.print("Target POT:");Serial.println(target);
 
 		markersPerWindowActual = 0;
-		while (x <= target-2)
+		
+		while (x <= target)
 		{
-			x += 2;
+			x += 1;
 			setSpedForP1(x);	
 			Serial.println(x);
-			delay(750);			
+			delay(100);			
 		}
-		
+
 		Serial.println("Stabilising...");		
-		delay(3000);
+		delay(5000);
 		Serial.println("Done");
 		//prepare the required data
-		
-		
-
+			
 		isPlaying = true;
 		SetState(E_STATE::Running);
 
