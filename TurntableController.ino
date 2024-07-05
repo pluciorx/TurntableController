@@ -29,7 +29,7 @@ volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[5];
+int spotPwm[3];
 int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 1
 
@@ -37,11 +37,13 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define minPOT 165
-#define maxPOT 205
+
 
 #define pot33 180
 #define pot45 195
+
+#define minPOT 168
+#define maxPOT 205
 volatile int currentP1Val;
 volatile int currentP0Val;
 int intervalFor33 = 520; //perfect for 9V
@@ -205,7 +207,7 @@ void loop() {
 		Serial.print("Target POT:");Serial.println(target);
 
 		markersPerWindowActual = 0;
-		while (x <= target-4)
+		while (x <= target-2)
 		{
 			x += 2;
 			setSpedForP1(x);	
@@ -376,6 +378,22 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 			if (deviatoonMarkers > 1)
 			{
+				int minValue;
+				switch (_mode)
+				{
+				case Auto33:
+				{
+					minValue = pot33 - 2;
+
+				}break;
+				case Auto45: {
+					minValue = pot45 - 3;
+				} break;
+				case Manual: {
+					minValue = minPOT;
+				} break;
+				}
+
 				int adj = 1;
 				
 				/*if (deviatoonMarkers > MAX_DEVITATION_MARKERS)
@@ -390,12 +408,27 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			}
 			if (deviatoonMarkers < -1)
 			{
+				int maxValue;
+				switch (_mode)
+				{
+				case Auto33:
+				{
+					maxValue = pot33 + 3;
+
+				}break;
+				case Auto45: {
+					maxValue = pot45 + 3;
+				} break;
+				case Manual: {
+					maxValue = maxPOT;
+				} break;
+				}
 				int adj = 1;
 				//if (deviatoonMarkers < -MAX_DEVITATION_MARKERS) {
 				//	adj = absDevMarkers / 2;
 				//}
 
-				int cap = min(maxPOT, currentP1Val + adj);
+				int cap = min(maxValue, currentP1Val + adj);
 				setSpedForP1(cap);
 			}
 			
