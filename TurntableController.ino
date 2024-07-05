@@ -2,6 +2,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
 
+
 //IR Sensor
 #define PIN_SENSOR 3
 
@@ -37,15 +38,14 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-
-
-#define pot33 183
+#define pot33 184
 #define pot45 195
 
-#define minPOT 168
+#define minPOT 172
 #define maxPOT 205
 volatile int currentP1Val;
 volatile int currentP0Val;
+
 int intervalFor33 = 530; //perfect for 9V 
 //520
 //1560
@@ -166,17 +166,16 @@ void loop() {
 	case Starting:
 	{
 		printState("    Starting    ");
-		printMeasuredSpeed(0,false);
-
+		printMeasuredSpeed(0,false);		
+		setSpedForP1(pot33);
+		delay(500);
 		int x = minPOT;
-		setSpedForP1(maxPOT);
-		delay(1500);
-		printState("   Stabilising   ");
+		printState(" Stabilising ");
 		int target;
 		switch (_mode)
 		{
 		case Auto33: {
-			target = pot33;
+			target = pot33-2;
 		}break;
 		case Auto45: {
 			target = pot45;
@@ -208,18 +207,25 @@ void loop() {
 		Serial.println("Engine starting...");
 		Serial.print("Target POT:");Serial.println(target);
 
-		markersPerWindowActual = 0;
-		
 		while (x <= target)
-		{
-			x += 1;
-			setSpedForP1(x);	
-			Serial.println(x);
-			delay(100);			
+		{			
+			x += 2;
+			setSpedForP1(min(target,x));
+			//Serial.println(x);
+			delay(350);
 		}
 
-		Serial.println("Stabilising...");		
-		delay(5000);
+		Serial.println("Stabilising...15s");		
+		unsigned long stabMillis = millis();
+		
+		markersPerWindowActual = 0;
+
+		while (!isAvgFound)
+		{			
+			measureSpeedOnlyImpPerWindow(false);
+		}
+		
+
 		Serial.println("Done");
 		//prepare the required data
 			
@@ -245,8 +251,6 @@ void loop() {
 		}break;
 				 
 		}
-		markersPerWindowActual = 0;
-	    printMeasuredSpeed(0,false);
 
 		while (isPlaying)
 		{

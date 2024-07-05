@@ -21,6 +21,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TurntableController.ino" />
+    <ClCompile Include="C:\Users\pluci\OneDrive\Documents\Arduino\libraries\avdweb_VirtualDelay\avdweb_VirtualDelay.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.TurntableController.vsarduino.h">
