@@ -25,32 +25,29 @@ float markersPerWindowRequired = 0.0;
 bool isPlaying = false;
 bool isAvgFound = false;
 
-int currPWm;
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[3];
+int spotPwm[5];
 int idxSpt = 0;
-#define MAX_DEVITATION_MARKERS 2
-
+#define MAX_DEVITATION_MARKERS 1
 
 #define MCP_ADDR 0x28 //(40)
-#define POT0 0x10
+#define POT0 0x10 //
 #define POT1 0x11
 
-#define minPOT 75
-#define maxPOT 230
+#define minPOT 165
+#define maxPOT 205
 
-#define pot33 185
-#define pot45 199
-volatile int currentPotVal;
+#define pot33 180
+#define pot45 195
+volatile int currentP1Val;
+volatile int currentP0Val;
+int intervalFor33 = 520; //perfect for 9V
+//1560
 
-volatile int x = 50;
-
-int intervalFor33 = 540;
-
-int intervalFor45 = 510; //2 seconds window - increase this if the no. of markers is less for better accuracy
+int intervalFor45 = 540; //2 seconds window - increase this if the no. of markers is less for better accuracy
 
 int measureInterval = intervalFor33; //just a default setting
 
@@ -68,9 +65,9 @@ enum E_MODE {
 	Manual = 2
 };
 
-volatile E_STATE _state;
-volatile E_MODE _mode;
-volatile E_MODE prev_mode;
+ E_STATE _state;
+ E_MODE _mode;
+ E_MODE prev_mode;
 
 void setup() {
 	Serial.begin(115200);
@@ -94,8 +91,7 @@ void setup() {
 	curMillis = lastMillis = millis();
 	_mode = E_MODE::Auto33;
 	prev_mode = E_MODE::Auto45;
-	writePot(MCP_ADDR, POT0, 128); //r1
-	writePot(MCP_ADDR, POT1, 1);
+	stopMotor();
 	SetState(E_STATE::Idle);
 }
 
@@ -121,13 +117,13 @@ void loop() {
 		isPlaying = false;
 		isAvgFound = false;
 		printMeasuredSpeed(0, false);
-
+		SetSelectedMode(E_MODE::Auto33);
 		while (!isPlaying)
 		{
 			updateButtons();
 
 			if (btnMenuLeft.isPressed()) {
-
+				Serial.println("Btn Left Pressed");
 				if ((int)_mode == 0)
 				{
 					_mode = E_MODE::Manual;
@@ -139,7 +135,7 @@ void loop() {
 			}
 
 			if (btnMenuRight.isPressed()) {
-
+				Serial.println("Btn Right Pressed");
 				if ((int)_mode == 2)
 				{
 					_mode = E_MODE::Auto33;
@@ -156,10 +152,11 @@ void loop() {
 				Serial.println("Play Pressed");
 				markersPerWindowActual = 0;
 				isPlaying = true;
+				printMeasuredSpeed(0, false);
 				break;
 			}
-
 			printSelectedSpeed(selectedSpeed);
+			
 		}
 		SetState(E_STATE::Starting);
 	}break;
@@ -168,15 +165,17 @@ void loop() {
 		printState("    Starting    ");
 		printMeasuredSpeed(0,false);
 
-		int x = minPOT+30;
-		int target = minPOT;
+		int x = minPOT;
+		setSpedForP1(maxPOT);
+		delay(3500);
+		int target;
 		switch (_mode)
 		{
 		case Auto33: {
-			target = pot33-5;
+			target = pot33;
 		}break;
 		case Auto45: {
-			target = pot45-5;
+			target = pot45;
 		} break;
 		case Manual:
 		{
@@ -186,19 +185,9 @@ void loop() {
 		default:
 			break;
 		}
-		Serial.println("Engine starting...");
-		Serial.println(target);
-		while (x < target)
-		{
-			x += 2;
-			setSpedForP1(x);	
-			Serial.println(x);
-			delay(50);
-		}
-		//prepare the required data
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
-	
+
 		if (selectedSpeed == 33.33) measureInterval = intervalFor33;
 		if (selectedSpeed == 45) measureInterval = intervalFor45;
 		markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
@@ -209,7 +198,28 @@ void loop() {
 		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
 		Serial.print("Max POT Value:"); Serial.println(minPOT);
 		Serial.print("Min POT Value:"); Serial.println(maxPOT);
-		Serial.print("Current POT Value:"); Serial.println(currentPotVal);
+		Serial.print("Current P1 Value:"); Serial.println(currentP1Val);
+		Serial.print("Current P0 Value:"); Serial.println(currentP0Val);
+
+		Serial.println("Engine starting...");
+		Serial.print("Target POT:");Serial.println(target);
+
+		markersPerWindowActual = 0;
+		while (x <= target-4)
+		{
+			x += 2;
+			setSpedForP1(x);	
+			Serial.println(x);
+			delay(750);			
+		}
+		
+		Serial.println("Stabilising...");		
+		delay(3000);
+		Serial.println("Done");
+		//prepare the required data
+		
+		
+
 		isPlaying = true;
 		SetState(E_STATE::Running);
 
@@ -232,6 +242,7 @@ void loop() {
 		}break;
 				 
 		}
+		markersPerWindowActual = 0;
 	    printMeasuredSpeed(0,false);
 
 		while (isPlaying)
@@ -252,15 +263,14 @@ void loop() {
 					else 
 					{					
 						
-						currPWm = currentPotVal;
 						if (btnMenuLeft.isPressed()) {
-							Serial.print("New pwm:"); Serial.println(currPWm--);
+							Serial.print("New pwm:"); Serial.println(currentP1Val--);
 						}
 
 						if (btnMenuRight.isPressed()) {
-							Serial.print("New pwm:"); Serial.println(currPWm++);
+							Serial.print("New pwm:"); Serial.println(currentP1Val++);
 						}
-						setSpedForP1(currPWm);
+						setSpedForP1(currentP1Val);
 						measureSpeedOnlyImpPerWindow(true);
 					}
 				}break;			
@@ -273,15 +283,16 @@ void loop() {
 	{
 		printState("    Stopping    ");
 
-		int currPwm = currentPotVal;
-		while (currPwm > 0)
+		
+		while (currentP1Val > 0)
 		{ 
 			measureSpeedOnlyImpPerWindow(true);			
-			currPwm -= 5;
-			if (currPwm < minPOT) currPwm = 0;
-			setSpedForP1(currPwm);
-			delay(50);
+			currentP1Val -= 2;
+			if (currentP1Val < minPOT) currentP1Val = 0;
+			setSpedForP1(currentP1Val);
+			delay(10);
 		}
+		stopMotor();
 		markersPerWindowActual = 0;
 		isPlaying = false;
 		SetState(E_STATE::Idle);
@@ -332,14 +343,14 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
 
-		currPWm = currentPotVal;
-		Serial.print(F("Current POT:")); Serial.println(currPWm);		
+		
+		Serial.print(F("Current P1 Value:")); Serial.println(currentP1Val);
 		if (displayOnly) return;
 
 		if (absDevMarkers == 0  && !isAvgFound)
 		{
-			Serial.print(F("Spot POT:")); Serial.println(currPWm);
-			spotPwm[idxSpt] = currPWm;
+			Serial.print(F("Spot POT:")); Serial.println(currentP1Val);
+			spotPwm[idxSpt] = currentP1Val;
 			idxSpt++;
 			if (idxSpt > sizeof(spotPwm)-1)
 			{
@@ -363,7 +374,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		
 		if (!isAvgFound) {
 
-			if (deviatoonMarkers > 0)
+			if (deviatoonMarkers > 1)
 			{
 				int adj = 1;
 				
@@ -372,19 +383,19 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 					adj = deviatoonMarkers/2;
 				}*/
 
-				int cap = max(minPOT, currentPotVal - adj);
+				int cap = max(minPOT, currentP1Val - adj);
 
 				setSpedForP1(cap);
 
 			}
-			if (deviatoonMarkers < 0)
+			if (deviatoonMarkers < -1)
 			{
 				int adj = 1;
 				//if (deviatoonMarkers < -MAX_DEVITATION_MARKERS) {
 				//	adj = absDevMarkers / 2;
 				//}
 
-				int cap = min(maxPOT, currentPotVal + adj);
+				int cap = min(maxPOT, currentP1Val + adj);
 				setSpedForP1(cap);
 			}
 			
@@ -399,10 +410,21 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 	Wire.endTransmission();
 }
 
+void stopMotor()
+{
+	writePot(MCP_ADDR, POT0, 128); //r1
+	writePot(MCP_ADDR, POT1, 0);
+}
+
 void setSpedForP1(int value)
 {
 	writePot(MCP_ADDR, POT1, value);
-	currentPotVal = value;
+	currentP1Val = value;
+}
+void setSpedForP0(int value)
+{
+	writePot(MCP_ADDR, POT0, value);
+	currentP0Val = value;
 }
 
 float average(int* array, int len)  // assuming array is int.
@@ -426,13 +448,13 @@ void SetSelectedMode(E_MODE selectedMode)
 	} break;
 	case Manual:
 	{
-
+		selectedSpeed = 33.33;
 	}
 	break;
 	default:
 		break;
 	}
-
+	Serial.print("Selected mode:"); Serial.println(selectedSpeed);
 }
 
 void HandleButtonsWhilePlaying()
