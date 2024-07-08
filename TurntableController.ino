@@ -33,7 +33,7 @@ volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[4];
+int spotPwm[5];
 int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 1
 
@@ -41,10 +41,10 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 145 //ideal value for 33 spd 
-#define pot45 178 //ideal calibrated value for 45
+#define pot33 150 //ideal value for 33 spd 
+#define pot45 180 //ideal calibrated value for 45
 
-#define minPOT pot33-5
+#define minPOT pot33-10
 #define maxPOT 200		//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
@@ -186,7 +186,7 @@ void loop() {
 		switch (_mode)
 		{
 		case Auto33: {
-			target = pot33-1;
+			target = pot33-2;
 		}break;
 		case Auto45: {
 			target = pot45-2;
@@ -222,11 +222,13 @@ void loop() {
 		{			
 			x += 2;
 			setSpedForP1(min(target,x));
-			//Serial.println(x);
+		
 			delay(100);
 		}
-		delay(550);
-		Serial.println("Stabilising...15s");		
+		delay(400);
+		setSpedForP1(target+1);
+		delay(200);
+				
 		unsigned long stabMillis = millis();
 		
 		markersPerWindowActual = 0;
@@ -235,6 +237,7 @@ void loop() {
 		{
 			updateButtons();
 			measureSpeedOnlyImpPerWindow(false);
+		
 			if (btnMenuEnter.isPressed())
 			{
 				Serial.println("Stop");
@@ -242,11 +245,7 @@ void loop() {
 				return;
 			}
 		}
-		
 
-		Serial.println("Done");
-		//prepare the required data
-			
 		isPlaying = true;
 		SetState(E_STATE::Running);
 
@@ -286,8 +285,7 @@ void loop() {
 						measureSpeedOnlyImpPerWindow(false);
 					}
 					else 
-					{					
-						
+					{											
 						if (btnMenuLeft.isPressed()) {
 							Serial.print("New pwm:"); Serial.println(currentP1Val--);
 						}
@@ -307,7 +305,7 @@ void loop() {
 	case Stopping:
 	{
 		printState("    Stopping    ");
-
+		stopMotor();
 		
 		while (currentP1Val > 0)
 		{ 
@@ -317,7 +315,7 @@ void loop() {
 			setSpedForP1(currentP1Val);
 			delay(10);
 		}
-		stopMotor();
+	
 		markersPerWindowActual = 0;
 		isPlaying = false;
 		SetState(E_STATE::Idle);
@@ -326,8 +324,7 @@ void loop() {
 }
 
 static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
-{
-	
+{	
 	curMillis = millis();
 
 	if (curMillis >= lastMillis + measureInterval) {
@@ -399,7 +396,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		
 		if (!isAvgFound) {
 
-			if (deviatoonMarkers > 1)
+			if (deviatoonMarkers > 0)
 			{
 				int minValue;
 				switch (_mode)
@@ -436,11 +433,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				{
 				case Auto33:
 				{
-					maxValue = pot33 + 3;
+					maxValue = pot33 + 2;
 
 				}break;
 				case Auto45: {
-					maxValue = pot45 + 2;
+					maxValue = pot45 + 3;
 				} break;
 				case Manual: {
 					maxValue = maxPOT;
