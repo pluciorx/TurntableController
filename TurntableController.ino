@@ -125,7 +125,7 @@ void loop() {
 	{
 	case Idle:
 	{
-		
+		disableOutput();
 		printState("<-    Speed   ->");		
 		isPlaying = false;
 		isAvgFound = false;
