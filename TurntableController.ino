@@ -6,6 +6,9 @@
 //IR Sensor
 #define PIN_SENSOR 3
 
+//MOSFET GATE PIN
+#define PIN_EN 9
+
 //Buttons
 #define PIN_BTN_LEFT 5
 #define PIN_BTN_RIGHT 6
@@ -30,7 +33,7 @@ volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[3];
+int spotPwm[4];
 int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 1
 
@@ -38,11 +41,12 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 184
-#define pot45 200
+#define pot33 145 //ideal value for 33 spd 
+#define pot45 178 //ideal calibrated value for 45
 
-#define minPOT 172
-#define maxPOT 205
+#define minPOT pot33-5
+#define maxPOT 200		//do no increase value above 205 as IT WILL damage the dPOT 
+
 volatile int currentP1Val;
 volatile int currentP0Val;
 
@@ -90,6 +94,11 @@ void setup() {
 	btnMenuRight.setDebounceTime(50);
 
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
+
+	pinMode(PIN_EN, INPUT_PULLUP);
+	pinMode(PIN_EN, OUTPUT);
+	digitalWrite(PIN_EN, HIGH);
+
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
 	curMillis = lastMillis = millis();
@@ -166,20 +175,21 @@ void loop() {
 	}break;
 	case Starting:
 	{
+		enableOutput();
 		printState("    Starting    ");
 		printMeasuredSpeed(0,false);		
 		setSpedForP1(pot33);
-		delay(500);
+		delay(400);
 		int x = minPOT;
 		printState(" Stabilising ");
 		int target;
 		switch (_mode)
 		{
 		case Auto33: {
-			target = pot33-2;
+			target = pot33-1;
 		}break;
 		case Auto45: {
-			target = pot45;
+			target = pot45-2;
 		} break;
 		case Manual:
 		{
@@ -213,17 +223,24 @@ void loop() {
 			x += 2;
 			setSpedForP1(min(target,x));
 			//Serial.println(x);
-			delay(350);
+			delay(100);
 		}
-
+		delay(550);
 		Serial.println("Stabilising...15s");		
 		unsigned long stabMillis = millis();
 		
 		markersPerWindowActual = 0;
 
 		while (!isAvgFound)
-		{			
+		{
+			updateButtons();
 			measureSpeedOnlyImpPerWindow(false);
+			if (btnMenuEnter.isPressed())
+			{
+				Serial.println("Stop");
+				SetState(E_STATE::Idle);
+				return;
+			}
 		}
 		
 
@@ -393,7 +410,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 				}break;
 				case Auto45: {
-					minValue = pot45 - 3;
+					minValue = pot45 - 2;
 				} break;
 				case Manual: {
 					minValue = minPOT;
@@ -423,7 +440,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 				}break;
 				case Auto45: {
-					maxValue = pot45 + 3;
+					maxValue = pot45 + 2;
 				} break;
 				case Manual: {
 					maxValue = maxPOT;
@@ -451,6 +468,7 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 
 void stopMotor()
 {
+	disableOutput();
 	writePot(MCP_ADDR, POT0, 128); //r1
 	writePot(MCP_ADDR, POT1, 0);
 }
@@ -466,6 +484,14 @@ void setSpedForP0(int value)
 	currentP0Val = value;
 }
 
+void disableOutput()
+{
+	digitalWrite(PIN_EN, HIGH);
+}
+void enableOutput()
+{
+	digitalWrite(PIN_EN, LOW);
+}
 float average(int* array, int len)  // assuming array is int.
 {
 	long sum = 0L;  // sum will be larger than an item, long for safety.

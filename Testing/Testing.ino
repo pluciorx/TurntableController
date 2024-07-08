@@ -5,68 +5,77 @@
 #define POT1 0x11
 
 #define maxPOT 215
-volatile int x = 50;
+
+#define MCP_ADDR 0x28 //(40)
+#define fet 9
 
 void setup()
 {
+
 	Wire.begin(); // Wire communication begin
 	Serial.begin(9600); // The baudrate of Serial monitor is set in 9600
-	while (!Serial); // Waiting for Serial Monitor
+	//while (!Serial); // Waiting for Serial Monitor
 	Serial.println("\nI2C Scanner");
+	pinMode(fet, INPUT_PULLUP);
+	pinMode(fet, OUTPUT);
+	digitalWrite(fet, HIGH);
+
 	writePot(MCP_ADDR, POT0, 128); //r1
 
 	writePot(MCP_ADDR, POT1, 1);
 	Serial.println("Ready.");
+
+	while (1)
+	{
+		
+		digitalWrite(fet, LOW);
+		setSpedForP1(180);
+		delay(2000);
+		digitalWrite(fet, HIGH);
+		delay(2000);
+
+	}
+
+
 }
+char incomingByte = 0; // for serial debugging
+int oldstate,state = 0;
+bool newData;
+String readString;
 
 void loop()
 {
+	char buffer[] = { ' ',' ',' ',' ',' ',' ',' ' }; // Receive up to 7 bytes
+	while (!Serial.available()); // Wait for characters
+	Serial.readBytesUntil('\n', buffer, 7);
+	int state = atoi(buffer);
+	if (state == -1)
+	if (state == -2) digitalWrite(fet, HIGH);
+	if (state > 0 ) setSpedForP1(state);
 
-	//delay(5000);
-	Serial.println("Starting");
-	byte error, address; //variable for error and I2C address
-	int nDevices;
 
-	Serial.println("Scanning...");
-
-	nDevices = 0;
-	for (address = 1; address < 127; address++)
-	{
-		// The i2c_scanner uses the return value of
-		// the Write.endTransmisstion to see if
-		// a device did acknowledge to the address.
-		Wire.beginTransmission(address);
-		error = Wire.endTransmission();
-
-		if (error == 0)
-		{
-			Serial.print("I2C device found at address 0x");
-			if (address < 16)
-				Serial.print("0");
-			Serial.print(address, HEX);
-			Serial.println("  !");
-			nDevices++;
-		}
-		else if (error == 4)
-		{
-			Serial.print("Unknown error at address 0x");
-			if (address < 16)
-				Serial.print("0");
-			Serial.println(address, HEX);
-		}
-	}
-	if (nDevices == 0)
-		Serial.println("No I2C devices found\n");
-	else
-		Serial.println("done\n");
-	if (x< maxPOT) writePot(MCP_ADDR, POT1, x++);
-	Serial.println(x);
-	delay(250); // wait 5 seconds for the next I2C scan
 }
+
+
 
 void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 	Wire.beginTransmission(address);
 	Wire.write((pot & 3) << 4 | ((val >> 8) & 3));
 	Wire.write(val & 0xFF);
 	Wire.endTransmission();
+}
+
+
+
+void setSpedForP1(int value)
+{
+	Serial.println(value);
+	writePot(MCP_ADDR, POT1, value);
+	
+}
+void setSpedForP0(int value)
+{
+	Serial.println(value);
+	writePot(MCP_ADDR, POT0, value);
+	
 }
