@@ -2,7 +2,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
 
-
 //IR Sensor
 #define PIN_SENSOR 3
 
@@ -41,7 +40,7 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 151 //ideal value for 33 spd 
+#define pot33 154 //ideal value for 33 spd 
 #define pot45 180 //ideal calibrated value for 45
 
 #define minPOT pot33-10
@@ -67,10 +66,12 @@ enum E_STATE {
 	Running,
 	Stopping
 };
+
 enum E_MODE {
 	Auto33 = 0,
 	Auto45 = 1,
-	Manual = 2
+	Manual33 = 2,
+	Manual45 = 3
 };
 
  E_STATE _state;
@@ -137,25 +138,26 @@ void loop() {
 
 			if (btnMenuLeft.isPressed()) {
 				Serial.println("Btn Left Pressed");
-				if ((int)_mode == 0)
+				if (_mode != E_MODE::Auto33)
 				{
-					_mode = E_MODE::Manual;
+					_mode = E_MODE::Auto33;
 				}
-				else {
-					_mode = (E_MODE)((int)_mode - 1);
+				else 
+					if (_mode == E_MODE::Auto33){
+					_mode = E_MODE::Manual33;
 				}
 				SetSelectedMode(_mode);
 			}
 
 			if (btnMenuRight.isPressed()) {
 				Serial.println("Btn Right Pressed");
-				if ((int)_mode == 2)
+				if (_mode != E_MODE::Auto45)
 				{
-					_mode = E_MODE::Auto33;
+					_mode = E_MODE::Auto45;
 				}
 				else
-				{
-					_mode = (E_MODE)((int)_mode + 1);
+					if (_mode == E_MODE::Auto45) {
+						_mode = E_MODE::Manual45;
 				}
 				SetSelectedMode(_mode);
 			}
@@ -181,21 +183,21 @@ void loop() {
 		setSpedForP1(pot33);
 		delay(400);
 		int x = minPOT;
+
 		printState(" Stabilising ");
 		int target;
 		switch (_mode)
 		{
-		case Auto33: {
-			target = pot33-2;
-		}break;
-		case Auto45: {
-			target = pot45-2;
-		} break;
-		case Manual:
+		case Auto33:
+		case Manual33:
 		{
 			target = pot33;
-		}
-		break;
+		}break;
+		case Auto45: 
+		case Manual45:
+		{
+			target = pot45;
+		} break;		
 		default:
 			break;
 		}
@@ -241,7 +243,7 @@ void loop() {
 			if (btnMenuEnter.isPressed())
 			{
 				Serial.println("Stop");
-				SetState(E_STATE::Idle);
+				SetState(E_STATE::Stopping);
 				return;
 			}
 		}
@@ -259,7 +261,8 @@ void loop() {
 		{
 			printState("      Speed     ");
 		}break;
-		case Manual: {
+		case Manual33: 
+		case Manual45:{
 			printState("-     Speed    +");
 
 		}break;
@@ -279,7 +282,9 @@ void loop() {
 				{
 					measureSpeedOnlyImpPerWindow(false);
 				}break;
-				case Manual: {					
+				case Manual33:
+				case Manual45:				
+				{					
 					if (abs(markersPerWindowRequired - markersPerWindowActual) > 20 )
 					{
 						measureSpeedOnlyImpPerWindow(false);
@@ -304,16 +309,17 @@ void loop() {
 	}break;
 	case Stopping:
 	{
-		printState("    Stopping    ");
 		stopMotor();
+
+		printState("    Stopping    ");
 		
-		while (currentP1Val > 0)
+		while (currentP1Val > minPOT)
 		{ 
 			measureSpeedOnlyImpPerWindow(true);			
 			currentP1Val -= 2;
 			if (currentP1Val < minPOT) currentP1Val = 0;
 			setSpedForP1(currentP1Val);
-			delay(10);
+			delay(200);
 		}
 	
 		markersPerWindowActual = 0;
@@ -395,6 +401,16 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		}
 		
 		if (!isAvgFound) {
+			int maxOver33, maxOver45, maxUnder33, maxUnder45;
+
+			if (abs(deviatoonMarkers) <= 2 )
+			{
+				maxOver33 = maxUnder33 = 2;
+			}else 
+			if (abs(deviatoonMarkers) > 2)
+			{
+				maxOver33 = maxUnder33 = 4;
+			}
 
 			if (deviatoonMarkers > 0)
 			{
@@ -403,51 +419,45 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				{
 				case Auto33:
 				{
-					minValue = pot33 - 2;
+					minValue = pot33 - maxUnder33;
 
 				}break;
 				case Auto45: {
-					minValue = pot45 - 2;
+					minValue = pot45 - maxUnder45;
 				} break;
-				case Manual: {
+				case Manual33:
+				case Manual45:
+				{
 					minValue = minPOT;
 				} break;
 				}
 
 				int adj = 1;
-				
-				/*if (deviatoonMarkers > MAX_DEVITATION_MARKERS)
-				{
-					adj = deviatoonMarkers/2;
-				}*/
 
 				int cap = max(minPOT, currentP1Val - adj);
 
 				setSpedForP1(cap);
 
-			}
-			if (deviatoonMarkers < -1)
+			}else if (deviatoonMarkers < 0)
 			{
 				int maxValue;
 				switch (_mode)
 				{
 				case Auto33:
 				{
-					maxValue = pot33 + 2;
+					maxValue = pot33 + maxOver33;
 
 				}break;
 				case Auto45: {
-					maxValue = pot45 + 3;
+					maxValue = pot45 + maxOver45;
 				} break;
-				case Manual: {
+				case Manual33:
+				case Manual45:
+				{
 					maxValue = maxPOT;
 				} break;
 				}
 				int adj = 1;
-				//if (deviatoonMarkers < -MAX_DEVITATION_MARKERS) {
-				//	adj = absDevMarkers / 2;
-				//}
-
 				int cap = min(maxValue, currentP1Val + adj);
 				setSpedForP1(cap);
 			}
@@ -502,17 +512,16 @@ void SetSelectedMode(E_MODE selectedMode)
 	switch (selectedMode)
 	{
 	case Auto33:
+	case Manual33:
 	{
 		selectedSpeed = 33.33;
 	}break;
-	case Auto45: {
+	case Auto45:
+	case Manual45:
+	{
 		selectedSpeed = 45.0;
 	} break;
-	case Manual:
-	{
-		selectedSpeed = 33.33;
-	}
-	break;
+	
 	default:
 		break;
 	}
@@ -555,7 +564,8 @@ void printSelectedSpeed(double selectedSpeed)
 			lcd.setCursor(12, 1);
 			lcd.print("rpm");
 		} break;
-		case Manual:
+		case Manual33:
+		case Manual45:
 		{
 			lcd.setCursor(0, 1);
 			lcd.print("M");
