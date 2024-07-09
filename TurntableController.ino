@@ -40,7 +40,7 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 154 //ideal value for 33 spd 
+#define pot33 157 //ideal value for 33 spd 
 #define pot45 180 //ideal calibrated value for 45
 
 #define minPOT pot33-10
@@ -403,13 +403,13 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		if (!isAvgFound) {
 			int maxOver33, maxOver45, maxUnder33, maxUnder45;
 
-			if (abs(deviatoonMarkers) <= 2 )
+			if (abs(deviatoonMarkers) <= 1 )
 			{
-				maxOver33 = maxUnder33 = 2;
+				maxOver33 = maxUnder33 = 3;
 			}else 
-			if (abs(deviatoonMarkers) > 2)
+			if (abs(deviatoonMarkers) > 1)
 			{
-				maxOver33 = maxUnder33 = 4;
+				maxOver33 = maxUnder33 = 6;
 			}
 
 			if (deviatoonMarkers > 0)
@@ -438,7 +438,9 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 				setSpedForP1(cap);
 
-			}else if (deviatoonMarkers < 0)
+			}
+			
+			if (deviatoonMarkers < 0)
 			{
 				int maxValue;
 				switch (_mode)
