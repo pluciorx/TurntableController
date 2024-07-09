@@ -41,7 +41,7 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 150 //ideal value for 33 spd 
+#define pot33 151 //ideal value for 33 spd 
 #define pot45 180 //ideal calibrated value for 45
 
 #define minPOT pot33-10
