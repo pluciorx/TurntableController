@@ -40,16 +40,17 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 156 //ideal value for 33 spd 
+#define pot33 151 //ideal value for 33 spd 
 #define pot45 180 //ideal calibrated value for 45
 
 #define minPOT pot33-10
-#define maxPOT 200		//do no increase value above 205 as IT WILL damage the dPOT 
+#define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 350; 
+int intervalFor33 = 700; 
+//350 = Ok 
 //530 - best value
 //1560
 
@@ -401,13 +402,18 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		}
 		
 		if (!isAvgFound) {
+
 			int maxOver33, maxOver45, maxUnder33, maxUnder45;
+			int adj = 1;
+			int minValue;
+			int cap;
+			int maxValue;
 
 			if (abs(deviatoonMarkers) <= 1 )
 			{
-				maxOver33 = maxUnder33 = 2;
+				maxOver33 = maxUnder33 = 1;
 				maxOver45 = maxUnder45 = 3;
-			}else 
+			} 
 
 			if (abs(deviatoonMarkers) > 1)
 			{
@@ -417,53 +423,49 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 			if (deviatoonMarkers > 0)
 			{
-				int minValue;
 				switch (_mode)
 				{
-				case Auto33:
-				{
-					minValue = pot33 - maxUnder33;
+					case Auto33:
+					{
+						minValue = pot33 - maxUnder33;
 
-				}break;
-				case Auto45: {
-					minValue = pot45 - maxUnder45;
-				} break;
-				case Manual33:
-				case Manual45:
-				{
-					minValue = minPOT;
-				} break;
+					}break;
+					case Auto45: 
+					{
+						minValue = pot45 - maxUnder45;
+					} break;
+					case Manual33:
+					case Manual45:
+					{
+						minValue = minPOT;
+					} break;
 				}
 
-				int adj = 1;
-
-				int cap = max(minPOT, currentP1Val - adj);
+				cap = max(minPOT, currentP1Val - adj);
 
 				setSpedForP1(cap);
-
 			}
 			
 			if (deviatoonMarkers < 0)
-			{
-				int maxValue;
+			{			
 				switch (_mode)
 				{
-				case Auto33:
-				{
-					maxValue = pot33 + maxOver33;
+					case Auto33:
+					{
+						maxValue = pot33 + maxOver33;
 
-				}break;
-				case Auto45: {
-					maxValue = pot45 + maxOver45;
-				} break;
-				case Manual33:
-				case Manual45:
-				{
-					maxValue = maxPOT;
-				} break;
+					}break;
+					case Auto45: {
+						maxValue = pot45 + maxOver45;
+					} break;
+					case Manual33:
+					case Manual45:
+					{
+						maxValue = maxPOT;
+					} break;
 				}
-				int adj = 1;
-				int cap = min(maxValue, currentP1Val + adj);
+				
+				cap = min(maxValue, currentP1Val + adj);
 				setSpedForP1(cap);
 			}
 			
