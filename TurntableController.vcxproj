@@ -133,7 +133,7 @@
       <CLanguageStandard>gnu11</CLanguageStandard>
       <CAdditionalWarning />
       <CppAdditionalWarning />
-      <ForcedIncludeFiles>c:\program files\microsoft visual studio\2022\enterprise\common7\ide\extensions\jydagq0n.l0f\Micro Platforms\default\vm-intelli-pre.h;C:\Users\pluci\AppData\Local\Temp\VMBuilds\TurntableController\nano_atmega328old\Debug\.vmintelli\3add9f024bfead51c35c34a87923dc45\vm-intelli-gcc-defines.h;c:\program files\microsoft visual studio\2022\enterprise\common7\ide\extensions\jydagq0n.l0f\Micro Platforms\default\vm-intelli-post.h;$(ProjectDir)__vm\.TurntableController.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles>C:\PROGRAM FILES\MICROSOFT VISUAL STUDIO\2022\ENTERPRISE\COMMON7\IDE\EXTENSIONS\JYDAGQ0N.L0F\Micro Platforms\default\vm-intelli-pre.h;C:\Users\pluci\AppData\Local\Temp\VMBuilds\TurntableController\nano_atmega328old\Debug\.vmintelli\7ad7b5710614dfa66b6b9cc54f5a7a33\vm-intelli-gcc-defines.h;C:\PROGRAM FILES\MICROSOFT VISUAL STUDIO\2022\ENTERPRISE\COMMON7\IDE\EXTENSIONS\JYDAGQ0N.L0F\Micro Platforms\default\vm-intelli-post.h;$(ProjectDir)__vm\.TurntableController.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <UndefineAllPreprocessorDefinitions>true</UndefineAllPreprocessorDefinitions>
       <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
       <PreprocessorDefinitions>_VMICRO_INTELLISENSE;__AVR_atmega328p__;__AVR_ATmega328P__;__AVR_ATmega328p__;_VMDEBUG=1;F_CPU=16000000L;ARDUINO=108010;ARDUINO_AVR_NANO;ARDUINO_ARCH_AVR;%(PreprocessorDefinitions)</PreprocessorDefinitions>

@@ -32,7 +32,7 @@ volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[5];
+int spotPwm[10];
 int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 1
 
@@ -40,7 +40,7 @@ int idxSpt = 0;
 #define POT0 0x10 //
 #define POT1 0x11
 
-#define pot33 157 //ideal value for 33 spd 
+#define pot33 156 //ideal value for 33 spd 
 #define pot45 180 //ideal calibrated value for 45
 
 #define minPOT pot33-10
@@ -49,8 +49,8 @@ int idxSpt = 0;
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 530; 
-//530
+int intervalFor33 = 350; 
+//530 - best value
 //1560
 
 int intervalFor45 = 600; //2 seconds window - increase this if the no. of markers is less for better accuracy
@@ -405,11 +405,14 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 			if (abs(deviatoonMarkers) <= 1 )
 			{
-				maxOver33 = maxUnder33 = 3;
+				maxOver33 = maxUnder33 = 2;
+				maxOver45 = maxUnder45 = 3;
 			}else 
+
 			if (abs(deviatoonMarkers) > 1)
 			{
-				maxOver33 = maxUnder33 = 6;
+				maxOver33 = maxUnder33 = 4;
+				maxOver45 = maxUnder45 = 6;
 			}
 
 			if (deviatoonMarkers > 0)
@@ -587,10 +590,10 @@ void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
 {
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{		
-		if (isAvgFound && abs(currenMeasuredSpeed - selectedSpeed) <= 0.65)
+		/*if (isAvgFound && abs(currenMeasuredSpeed - selectedSpeed) <= 0.65)
 		{
 			currenMeasuredSpeed = selectedSpeed;			
-		}
+		}*/
 		
 		lcd.setCursor(6, 1);
 		lcd.print("      ");
