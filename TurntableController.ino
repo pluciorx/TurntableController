@@ -43,14 +43,15 @@ volatile int idxSpt = 0;
 
 int  pot33 = 70; //ideal value for 33 spd 
 int  pot45 = 100; //ideal calibrated value for 45
-
+int idealPot;
 #define minPOT pot33-15
 #define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 700;
+int intervalFor33 = 1050;
+//700 OK
 //350 = Ok 
 //530 - best value
 //1560
@@ -387,12 +388,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			if (idxSpt > sizeof(spotPwm) - 1)
 			{
 				idxSpt = 0;
-				int avg = average(spotPwm, sizeof(idxSpt));
-				Serial.print(F("Found Average:")); Serial.println(avg);
-				setSpedForP1(avg);
-
+				idealPot = average(spotPwm, sizeof(idxSpt));
+				Serial.print(F("Found Average:")); Serial.println(idealPot);
+							
 				isAvgFound = true;
-
+				setSpedForP1(idealPot);
 				return;
 			}
 			
@@ -433,7 +433,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				{
 				case Auto33:
 				{
-					minValue = pot33 - maxUnder33;
+					minValue = - maxUnder33;
 
 
 				}break;
@@ -472,9 +472,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 				cap = min(maxPOT, currentP1Val + adj);		
 				setSpedForP1(cap);
-			}
-			
-
+			}			
 		}
 	}
 }
