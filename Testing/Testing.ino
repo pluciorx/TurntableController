@@ -18,23 +18,23 @@ void setup()
 	Serial.println("\nI2C Scanner");
 	pinMode(fet, INPUT_PULLUP);
 	pinMode(fet, OUTPUT);
-	digitalWrite(fet, HIGH);
+	digitalWrite(fet, LOW);
 
-	writePot(MCP_ADDR, POT0, 128); //r1
+	writePot(MCP_ADDR, POT1, 70); //r1
 
-	writePot(MCP_ADDR, POT1, 1);
+	writePot(MCP_ADDR, POT0, 120);
 	Serial.println("Ready.");
 
-	while (1)
+	/*while (1)
 	{
 		
 		digitalWrite(fet, LOW);
-		setSpedForP1(180);
+		setSpedForP1(220);
 		delay(2000);
 		digitalWrite(fet, HIGH);
 		delay(2000);
 
-	}
+	}*/
 
 
 }
@@ -49,9 +49,9 @@ void loop()
 	while (!Serial.available()); // Wait for characters
 	Serial.readBytesUntil('\n', buffer, 7);
 	int state = atoi(buffer);
-	if (state == -1)
+	if (state == -1) digitalWrite(fet, LOW);
 	if (state == -2) digitalWrite(fet, HIGH);
-	if (state > 0 ) setSpedForP1(state);
+	if (state > 0 ) setSpedForP0(state);
 
 
 }

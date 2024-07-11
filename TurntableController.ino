@@ -20,36 +20,37 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 float selectedSpeed = 33.33;
-float prevMeasuredSpeed = -1;
+volatile float prevMeasuredSpeed = -1;
 float revPerSecondRequired = 0.0;
 float markersPerSecondRequired = 0.0;
 float markersPerWindowRequired = 0.0;
 
-bool isPlaying = false;
-bool isAvgFound = false;
+volatile bool isPlaying = false;
+volatile bool isAvgFound = false;
 
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[10];
-int idxSpt = 0;
+int spotPwm[5];
+volatile int idxSpt = 0;
 #define MAX_DEVITATION_MARKERS 1
 
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
 #define POT1 0x11
+#define POT0_Default 50
 
-#define pot33 151 //ideal value for 33 spd 
-#define pot45 180 //ideal calibrated value for 45
+int  pot33 = 70; //ideal value for 33 spd 
+int  pot45 = 100; //ideal calibrated value for 45
 
-#define minPOT pot33-10
+#define minPOT pot33-15
 #define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 700; 
+int intervalFor33 = 700;
 //350 = Ok 
 //530 - best value
 //1560
@@ -75,9 +76,9 @@ enum E_MODE {
 	Manual45 = 3
 };
 
- E_STATE _state;
- E_MODE _mode;
- E_MODE prev_mode;
+volatile E_STATE _state;
+volatile E_MODE _mode;
+volatile E_MODE prev_mode;
 
 void setup() {
 	Serial.begin(115200);
@@ -85,7 +86,7 @@ void setup() {
 	lcd.backlight();
 	lcd.clear();
 
-	markersPerWindowActual = 0;	
+	markersPerWindowActual = 0;
 
 	pinMode(PIN_BTN_LEFT, INPUT_PULLUP);
 	pinMode(PIN_BTN_RIGHT, INPUT_PULLUP);
@@ -100,6 +101,9 @@ void setup() {
 	pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
 	digitalWrite(PIN_EN, HIGH);
+
+	writePot(MCP_ADDR, POT0, POT0_Default); //r1
+	writePot(MCP_ADDR, POT1, POT0_Default); //r2
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
@@ -128,7 +132,7 @@ void loop() {
 	case Idle:
 	{
 		disableOutput();
-		printState("<-    Speed   ->");		
+		printState("<-    Speed   ->");
 		isPlaying = false;
 		isAvgFound = false;
 		printMeasuredSpeed(0, false);
@@ -143,10 +147,10 @@ void loop() {
 				{
 					_mode = E_MODE::Auto33;
 				}
-				else 
-					if (_mode == E_MODE::Auto33){
-					_mode = E_MODE::Manual33;
-				}
+				else
+					if (_mode == E_MODE::Auto33) {
+						_mode = E_MODE::Manual33;
+					}
 				SetSelectedMode(_mode);
 			}
 
@@ -159,7 +163,7 @@ void loop() {
 				else
 					if (_mode == E_MODE::Auto45) {
 						_mode = E_MODE::Manual45;
-				}
+					}
 				SetSelectedMode(_mode);
 			}
 
@@ -172,7 +176,7 @@ void loop() {
 				break;
 			}
 			printSelectedSpeed(selectedSpeed);
-			
+
 		}
 		SetState(E_STATE::Starting);
 	}break;
@@ -180,7 +184,7 @@ void loop() {
 	{
 		enableOutput();
 		printState("    Starting    ");
-		printMeasuredSpeed(0,false);		
+		printMeasuredSpeed(0, false);
 		setSpedForP1(pot33);
 		delay(400);
 		int x = minPOT;
@@ -194,11 +198,11 @@ void loop() {
 		{
 			target = pot33;
 		}break;
-		case Auto45: 
+		case Auto45:
 		case Manual45:
 		{
 			target = pot45;
-		} break;		
+		} break;
 		default:
 			break;
 		}
@@ -219,28 +223,28 @@ void loop() {
 		Serial.print("Current P0 Value:"); Serial.println(currentP0Val);
 
 		Serial.println("Engine starting...");
-		Serial.print("Target POT:");Serial.println(target);
+		Serial.print("Target POT:"); Serial.println(target);
 
 		while (x <= target)
-		{			
+		{
 			x += 2;
-			setSpedForP1(min(target,x));
-		
+			setSpedForP1(min(target, x));
+
 			delay(100);
 		}
 		delay(400);
-		setSpedForP1(target+1);
+		setSpedForP1(target + 1);
 		delay(200);
-				
+
 		unsigned long stabMillis = millis();
-		
+
 		markersPerWindowActual = 0;
 
 		while (!isAvgFound)
 		{
 			updateButtons();
 			measureSpeedOnlyImpPerWindow(false);
-		
+
 			if (btnMenuEnter.isPressed())
 			{
 				Serial.println("Stop");
@@ -262,15 +266,15 @@ void loop() {
 		{
 			printState("      Speed     ");
 		}break;
-		case Manual33: 
-		case Manual45:{
+		case Manual33:
+		case Manual45: {
 			printState("-     Speed    +");
 
 		}break;
 		default: {
 
 		}break;
-				 
+
 		}
 
 		while (isPlaying)
@@ -278,31 +282,31 @@ void loop() {
 			updateButtons();
 			switch (_mode)
 			{
-				case Auto33:
-				case Auto45:
+			case Auto33:
+			case Auto45:
+			{
+				measureSpeedOnlyImpPerWindow(false);
+			}break;
+			case Manual33:
+			case Manual45:
+			{
+				if (abs(markersPerWindowRequired - markersPerWindowActual) > 20)
 				{
 					measureSpeedOnlyImpPerWindow(false);
-				}break;
-				case Manual33:
-				case Manual45:				
-				{					
-					if (abs(markersPerWindowRequired - markersPerWindowActual) > 20 )
-					{
-						measureSpeedOnlyImpPerWindow(false);
+				}
+				else
+				{
+					if (btnMenuLeft.isPressed()) {
+						Serial.print("New pwm:"); Serial.println(currentP1Val--);
 					}
-					else 
-					{											
-						if (btnMenuLeft.isPressed()) {
-							Serial.print("New pwm:"); Serial.println(currentP1Val--);
-						}
 
-						if (btnMenuRight.isPressed()) {
-							Serial.print("New pwm:"); Serial.println(currentP1Val++);
-						}
-						setSpedForP1(currentP1Val);
-						measureSpeedOnlyImpPerWindow(true);
+					if (btnMenuRight.isPressed()) {
+						Serial.print("New pwm:"); Serial.println(currentP1Val++);
 					}
-				}break;			
+					setSpedForP1(currentP1Val);
+					measureSpeedOnlyImpPerWindow(true);
+				}
+			}break;
 			}
 			HandleButtonsWhilePlaying();
 		}
@@ -313,16 +317,16 @@ void loop() {
 		stopMotor();
 
 		printState("    Stopping    ");
-		
+
 		while (currentP1Val > minPOT)
-		{ 
-			measureSpeedOnlyImpPerWindow(true);			
+		{
+			measureSpeedOnlyImpPerWindow(true);
 			currentP1Val -= 2;
 			if (currentP1Val < minPOT) currentP1Val = 0;
 			setSpedForP1(currentP1Val);
 			delay(200);
 		}
-	
+
 		markersPerWindowActual = 0;
 		isPlaying = false;
 		SetState(E_STATE::Idle);
@@ -331,12 +335,12 @@ void loop() {
 }
 
 static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
-{	
+{
 	curMillis = millis();
 
 	if (curMillis >= lastMillis + measureInterval) {
 		lastMillis = curMillis;
-		
+
 		int numberOfPulses = 0;
 
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -354,12 +358,12 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		int markersRequiredRounded = round(markersPerWindowRequired);
 		int deviatoonMarkers = numberOfPulses - markersRequiredRounded;
-		
+
 		markersPerWindowActual = 0;
 		int absDevMarkers = abs(deviatoonMarkers);
-		float devSpd = abs(rotationsPerMinute - selectedSpeed);		
-				
-		printMeasuredSpeed(rotationsPerMinute, isAvgFound);	
+		float devSpd = abs(rotationsPerMinute - selectedSpeed);
+
+		printMeasuredSpeed(rotationsPerMinute, isAvgFound);
 
 		Serial.println("");
 		Serial.print(F("Markers required per interval:")); Serial.println(markersPerWindowRequired, 3);
@@ -368,56 +372,58 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		Serial.print(F("Markers requred per 1s:")); Serial.println(markersPerSecondRequired, 3);
 		Serial.print(F("Markers counted per 1s:")); Serial.println(impulsesPerSecond, 3);
 		Serial.print(F("RPM calculated:")); Serial.println(rotationsPerMinute, 3);
-		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);		
+		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);
 		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
 
-		
+
 		Serial.print(F("Current P1 Value:")); Serial.println(currentP1Val);
 		if (displayOnly) return;
 
-		if (absDevMarkers == 0  && !isAvgFound)
+		if (absDevMarkers == 0 && !isAvgFound)
 		{
 			Serial.print(F("Spot POT:")); Serial.println(currentP1Val);
 			spotPwm[idxSpt] = currentP1Val;
 			idxSpt++;
-			if (idxSpt > sizeof(spotPwm)-1)
+			if (idxSpt > sizeof(spotPwm) - 1)
 			{
 				idxSpt = 0;
 				int avg = average(spotPwm, sizeof(idxSpt));
-				Serial.print(F("Found Average:")); Serial.println(avg);								
+				Serial.print(F("Found Average:")); Serial.println(avg);
 				setSpedForP1(avg);
-				
+
 				isAvgFound = true;
 
 				return;
 			}
 		}
-		
+
 		if (absDevMarkers > MAX_DEVITATION_MARKERS)
 		{
 			isAvgFound = false;
 			memset(spotPwm, 0, sizeof(spotPwm));
 			idxSpt = 0;
 		}
-		
-		if (!isAvgFound) {
 
+		if (!isAvgFound) {
+			
 			int maxOver33, maxOver45, maxUnder33, maxUnder45;
 			int adj = 1;
 			int minValue;
 			int cap;
 			int maxValue;
 
-			if (abs(deviatoonMarkers) <= 1 )
+			if (abs(deviatoonMarkers) <= 1)
 			{
-				maxOver33 = maxUnder33 = 1;
+				maxOver33 = 1;
+				maxUnder33 = 2;
 				maxOver45 = maxUnder45 = 3;
-			} 
+			}
 
 			if (abs(deviatoonMarkers) > 1)
 			{
-				maxOver33 = maxUnder33 = 4;
+				maxOver33 = 5;
+				maxUnder33 = 4;
 				maxOver45 = maxUnder45 = 6;
 			}
 
@@ -425,51 +431,51 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			{
 				switch (_mode)
 				{
-					case Auto33:
-					{
-						minValue = pot33 - maxUnder33;
+				case Auto33:
+				{
+					minValue = pot33 - maxUnder33;
 
-					}break;
-					case Auto45: 
-					{
-						minValue = pot45 - maxUnder45;
-					} break;
-					case Manual33:
-					case Manual45:
-					{
-						minValue = minPOT;
-					} break;
+				}break;
+				case Auto45:
+				{
+					minValue = pot45 - maxUnder45;
+				} break;
+				case Manual33:
+				case Manual45:
+				{
+					minValue = minPOT;
+				} break;
 				}
 
 				cap = max(minPOT, currentP1Val - adj);
 
 				setSpedForP1(cap);
 			}
-			
+
 			if (deviatoonMarkers < 0)
-			{			
+			{
 				switch (_mode)
 				{
-					case Auto33:
-					{
-						maxValue = pot33 + maxOver33;
+				case Auto33:
+				{
+					maxValue = pot33 + maxOver33;
 
-					}break;
-					case Auto45: {
-						maxValue = pot45 + maxOver45;
-					} break;
-					case Manual33:
-					case Manual45:
-					{
-						maxValue = maxPOT;
-					} break;
+				}break;
+				case Auto45: {
+					maxValue = pot45 + maxOver45;
+				} break;
+				case Manual33:
+				case Manual45:
+				{
+					maxValue = maxPOT;
+				} break;
 				}
-				
+
 				cap = min(maxValue, currentP1Val + adj);
 				setSpedForP1(cap);
 			}
-			
-		}		
+
+		}
 	}
 }
 
@@ -483,8 +489,7 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 void stopMotor()
 {
 	disableOutput();
-	writePot(MCP_ADDR, POT0, 128); //r1
-	writePot(MCP_ADDR, POT1, 0);
+	writePot(MCP_ADDR, POT1, POT0_Default);
 }
 
 void setSpedForP1(int value)
@@ -528,7 +533,7 @@ void SetSelectedMode(E_MODE selectedMode)
 	{
 		selectedSpeed = 45.0;
 	} break;
-	
+
 	default:
 		break;
 	}
@@ -588,24 +593,24 @@ void printSelectedSpeed(double selectedSpeed)
 	}
 }
 
-void printMeasuredSpeed(float currenMeasuredSpeed,bool isAvgFound)
+void printMeasuredSpeed(float currenMeasuredSpeed, bool isAvgFound)
 {
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
-	{		
+	{
 		/*if (isAvgFound && abs(currenMeasuredSpeed - selectedSpeed) <= 0.65)
 		{
-			currenMeasuredSpeed = selectedSpeed;			
+			currenMeasuredSpeed = selectedSpeed;
 		}*/
-		
+
 		lcd.setCursor(6, 1);
 		lcd.print("      ");
 		lcd.setCursor(6, 1);
 		lcd.print(currenMeasuredSpeed);
-		lcd.setCursor(12, 1);		
+		lcd.setCursor(12, 1);
 		lcd.print("rpm");
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
-		
+
 		if (isAvgFound && currenMeasuredSpeed == selectedSpeed) {
 
 			lcd.print("*");
