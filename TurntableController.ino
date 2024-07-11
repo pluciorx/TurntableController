@@ -399,7 +399,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		}
 
-		if (absDevMarkers >= MAX_DEVITATION_MARKERS)
+		if (absDevMarkers > MAX_DEVITATION_MARKERS)
 		{
 			isAvgFound = false;
 			memset(spotPwm, 0, sizeof(spotPwm));
