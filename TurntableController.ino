@@ -34,7 +34,7 @@ unsigned long curMillis = 0;
 
 int spotPwm[5];
 volatile int idxSpt = 0;
-#define MAX_DEVITATION_MARKERS 1
+#define MAX_DEVITATION_MARKERS 2
 
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
@@ -376,11 +376,10 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
 
-
 		Serial.print(F("Current P1 Value:")); Serial.println(currentP1Val);
 		if (displayOnly) return;
 
-		if (absDevMarkers == 0 && !isAvgFound)
+		if (absDevMarkers == 0)
 		{
 			Serial.print(F("Spot POT:")); Serial.println(currentP1Val);
 			spotPwm[idxSpt] = currentP1Val;
@@ -396,15 +395,16 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 				return;
 			}
+			
 		}
 
-		if (absDevMarkers > MAX_DEVITATION_MARKERS)
+		if (absDevMarkers >= MAX_DEVITATION_MARKERS)
 		{
 			isAvgFound = false;
 			memset(spotPwm, 0, sizeof(spotPwm));
 			idxSpt = 0;
 		}
-
+		
 		if (!isAvgFound) {
 			
 			int maxOver33, maxOver45, maxUnder33, maxUnder45;
@@ -413,27 +413,28 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			int cap;
 			int maxValue;
 
-			if (abs(deviatoonMarkers) <= 1)
+			if (absDevMarkers <= 1)
 			{
-				maxOver33 = 1;
+				maxOver33 = 2;
 				maxUnder33 = 2;
 				maxOver45 = maxUnder45 = 3;
 			}
 
-			if (abs(deviatoonMarkers) > 1)
+			if (absDevMarkers > 1)
 			{
 				maxOver33 = 5;
 				maxUnder33 = 4;
 				maxOver45 = maxUnder45 = 6;
 			}
 
-			if (deviatoonMarkers > 0)
+			if (deviatoonMarkers >= 1 )
 			{
 				switch (_mode)
 				{
 				case Auto33:
 				{
 					minValue = pot33 - maxUnder33;
+
 
 				}break;
 				case Auto45:
@@ -446,13 +447,11 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 					minValue = minPOT;
 				} break;
 				}
-
-				cap = max(minPOT, currentP1Val - adj);
-
+				cap = max(minPOT, currentP1Val - adj);	
 				setSpedForP1(cap);
 			}
 
-			if (deviatoonMarkers < 0)
+			if (deviatoonMarkers <= -1)
 			{
 				switch (_mode)
 				{
@@ -471,9 +470,10 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				} break;
 				}
 
-				cap = min(maxValue, currentP1Val + adj);
+				cap = min(maxPOT, currentP1Val + adj);		
 				setSpedForP1(cap);
 			}
+			
 
 		}
 	}
