@@ -41,9 +41,10 @@ volatile int idxSpt = 0;
 #define POT1 0x11
 #define POT0_Default 50
 
-int  pot33 = 70; //ideal value for 33 spd 
-int  pot45 = 100; //ideal calibrated value for 45
-int idealPot;
+#define  pot33  73 //ideal value for 33 spd 
+#define  pot45  90 //ideal calibrated value for 45
+int idealPot = 0;
+
 #define minPOT pot33-15
 #define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
 
@@ -197,12 +198,12 @@ void loop() {
 		case Auto33:
 		case Manual33:
 		{
-			target = pot33;
+			target = pot33 - 1;
 		}break;
 		case Auto45:
 		case Manual45:
 		{
-			target = pot45;
+			target = pot45 - 1;
 		} break;
 		default:
 			break;
@@ -358,10 +359,10 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 
 		int markersRequiredRounded = round(markersPerWindowRequired);
-		int deviatoonMarkers = numberOfPulses - markersRequiredRounded;
+		int deviatonMarkers = numberOfPulses - markersRequiredRounded;
 
 		markersPerWindowActual = 0;
-		int absDevMarkers = abs(deviatoonMarkers);
+		int absDevMarkers = abs(deviatonMarkers);
 		float devSpd = abs(rotationsPerMinute - selectedSpeed);
 
 		printMeasuredSpeed(rotationsPerMinute, isAvgFound);
@@ -373,7 +374,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 		Serial.print(F("Markers requred per 1s:")); Serial.println(markersPerSecondRequired, 3);
 		Serial.print(F("Markers counted per 1s:")); Serial.println(impulsesPerSecond, 3);
 		Serial.print(F("RPM calculated:")); Serial.println(rotationsPerMinute, 3);
-		Serial.print(F("Deviation pulses:")); Serial.println(deviatoonMarkers);
+		Serial.print(F("Deviation pulses:")); Serial.println(deviatonMarkers);
 		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
 		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
 
@@ -390,12 +391,12 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				idxSpt = 0;
 				idealPot = average(spotPwm, sizeof(idxSpt));
 				Serial.print(F("Found Average:")); Serial.println(idealPot);
-							
+
 				isAvgFound = true;
 				setSpedForP1(idealPot);
 				return;
 			}
-			
+
 		}
 
 		if (absDevMarkers >= MAX_DEVITATION_MARKERS)
@@ -404,36 +405,41 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			memset(spotPwm, 0, sizeof(spotPwm));
 			idxSpt = 0;
 		}
-		
+
 		if (!isAvgFound) {
-			
+
 			int maxOver33, maxOver45, maxUnder33, maxUnder45;
 			int adj = 1;
 			int minValue;
 			int cap;
 			int maxValue;
-
-			if (absDevMarkers <= 1)
+			if (idealPot > 0)
 			{
-				maxOver33 = 2;
-				maxUnder33 = 2;
-				maxOver45 = maxUnder45 = 3;
+				if (absDevMarkers <= -1)
+				{
+					maxOver33 = 1;
+					maxUnder33 = 1;
+					maxOver45 = maxUnder45 = 3;
+				}
+
+				if (absDevMarkers >= 1)
+				{
+					maxOver33 = 3;
+					maxUnder33 = 3;
+					maxOver45 = maxUnder45 = 6;
+				}
 			}
-
-			if (absDevMarkers > 1)
+			int newPot = currentP1Val;
+			if (deviatonMarkers > 0)
 			{
-				maxOver33 = 5;
-				maxUnder33 = 4;
-				maxOver45 = maxUnder45 = 6;
-			}
 
-			if (deviatoonMarkers >= 1 )
-			{
-				switch (_mode)
+				newPot = currentP1Val - absDevMarkers;
+				newPot = max(newPot, currentP1Val - maxUnder33);
+				/*switch (_mode)
 				{
 				case Auto33:
 				{
-					minValue = - maxUnder33;
+					minValue = idealPot - maxUnder33;
 
 
 				}break;
@@ -446,33 +452,21 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 				{
 					minValue = minPOT;
 				} break;
-				}
-				cap = max(minPOT, currentP1Val - adj);	
+				}*/
+
+
+				cap = max(minPOT, newPot);
 				setSpedForP1(cap);
 			}
 
-			if (deviatoonMarkers <= -1)
+			if (deviatonMarkers < 0)
 			{
-				switch (_mode)
-				{
-				case Auto33:
-				{
-					maxValue = pot33 + maxOver33;
+				newPot = currentP1Val + absDevMarkers;
+				newPot = min(newPot, currentP1Val + maxOver33);
 
-				}break;
-				case Auto45: {
-					maxValue = pot45 + maxOver45;
-				} break;
-				case Manual33:
-				case Manual45:
-				{
-					maxValue = maxPOT;
-				} break;
-				}
-
-				cap = min(maxPOT, currentP1Val + adj);		
+				cap = min(maxPOT, newPot);
 				setSpedForP1(cap);
-			}			
+			}
 		}
 	}
 }
