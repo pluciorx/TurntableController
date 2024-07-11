@@ -34,7 +34,7 @@ unsigned long curMillis = 0;
 
 int spotPwm[5];
 volatile int idxSpt = 0;
-#define MAX_DEVITATION_MARKERS 2
+#define MAX_DEVITATION_MARKERS 1
 
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
