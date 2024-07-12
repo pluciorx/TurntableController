@@ -37,26 +37,13 @@ unsigned long curMillis = 0;
 #define POT1 0x11
 #define POT0_Default 50
 
-#define  pot33  73 //ideal value for 33 spd 
-#define  pot45  90 //ideal calibrated value for 45
-int idealPot = 0;
-
-#define minPOT pot33-10  
-#define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
+#define minPOT 65  
+#define maxPOT 110	//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 700;
-//700 OK
-//350 = Ok 
-//530 - best value
-//1560
-
-int intervalFor45 = 600; //2 seconds window - increase this if the no. of markers is less for better accuracy
-//600ms  = exactly 81 markers required
-
-double Kp = 1.2;  // Proportional gain
+double Kp = 0.9;  // Proportional gain
 double Ki = 0.0;  // Integral gain
 double Kd = 0.03; // Derivative gain
 
@@ -64,10 +51,10 @@ double previousError = 0;
 double integral = 0;
 
 int stableCount = 0;
-const int stabilityThreshold = 15;  // Number of consecutive stable intervals needed
+const int stabilityThreshold = 10;  // Number of consecutive stable intervals needed
 const double acceptableError = 0.5; // Acceptable error range for RPM
 
-int measureInterval = intervalFor33; //just a default setting
+int measureInterval = 500; //just a default setting
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
 
@@ -194,8 +181,6 @@ void loop() {
 		enableOutput();
 		printState("    Starting    ");
 		printMeasuredSpeed(0, false);
-		setSpedForP1(pot33);
-		delay(400);
 		int x = minPOT;
 
 		printState(" Stabilising ");
@@ -205,21 +190,19 @@ void loop() {
 		case Auto33:
 		case Manual33:
 		{
-			target = pot33 - 1;
+			
 		}break;
 		case Auto45:
 		case Manual45:
 		{
-			target = pot45 - 1;
+			
 		} break;
 		default:
 			break;
 		}
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
-
-		if (selectedSpeed == 33.33) measureInterval = intervalFor33;
-		if (selectedSpeed == 45) measureInterval = intervalFor45;
+		
 		markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
 
 		Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
@@ -233,19 +216,6 @@ void loop() {
 
 		Serial.println("Engine starting...");
 		Serial.print("Target POT:"); Serial.println(target);
-
-		while (x <= target)
-		{
-			x += 2;
-			setSpedForP1(min(target, x));
-
-			delay(100);
-		}
-		/*delay(200);
-		setSpedForP1(target);*/
-		delay(400);
-
-		unsigned long stabMillis = millis();
 
 		markersPerWindowActual = 0;
 
