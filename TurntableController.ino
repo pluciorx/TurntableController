@@ -35,26 +35,27 @@ unsigned long curMillis = 0;
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
 #define POT1 0x11
-#define POT0_Default 50
+#define POT0_Default 255
 
-#define minPOT 65  
-#define maxPOT 110	//do no increase value above 205 as IT WILL damage the dPOT 
+#define minPOT 1  
+#define maxPOT 255	//do no increase value above 205 as IT WILL damage the dPOT 
 
-volatile int currentP1Val;
-volatile int currentP0Val;
+volatile int currentPVal = maxPOT;
 
-double Kp = 0.9;  // Proportional gain
-double Ki = 0.0;  // Integral gain
-double Kd = 0.03; // Derivative gain
+double Kp = 1;   // Increased for faster response
+double Ki = 0.1;   // Increased to reduce steady-state error
+double Kd = 0.01;  // Introduced for damping oscillations
 
 double previousError = 0;
 double integral = 0;
+const double integralLimit = 100.0; // Limit for the integral term
 
 int stableCount = 0;
 const int stabilityThreshold = 10;  // Number of consecutive stable intervals needed
 const double acceptableError = 0.5; // Acceptable error range for RPM
 
-int measureInterval = 500; //just a default setting
+int measureInterval = 350; 
+
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
 
@@ -94,12 +95,11 @@ void setup() {
 
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
 
-	pinMode(PIN_EN, INPUT_PULLUP);
+	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
 	disableOutput();
-
-	writePot(MCP_ADDR, POT0, POT0_Default); //r1
-	writePot(MCP_ADDR, POT1, POT0_Default); //r2
+	setSpedForP0(POT0_Default);
+	setSpedForP1(255);
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
@@ -211,8 +211,7 @@ void loop() {
 		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
 		Serial.print("Max POT Value:"); Serial.println(minPOT);
 		Serial.print("Min POT Value:"); Serial.println(maxPOT);
-		Serial.print("Current P1 Value:"); Serial.println(currentP1Val);
-		Serial.print("Current P0 Value:"); Serial.println(currentP0Val);
+		Serial.print("Current P1 Value:"); Serial.println(currentPVal);
 
 		Serial.println("Engine starting...");
 		Serial.print("Target POT:"); Serial.println(target);
@@ -276,13 +275,13 @@ void loop() {
 				else
 				{
 					if (btnMenuLeft.isPressed()) {
-						Serial.print("New pwm:"); Serial.println(currentP1Val--);
+						Serial.print("New pwm:"); Serial.println(currentPVal--);
 					}
 
 					if (btnMenuRight.isPressed()) {
-						Serial.print("New pwm:"); Serial.println(currentP1Val++);
+						Serial.print("New pwm:"); Serial.println(currentPVal++);
 					}
-					setSpedForP1(currentP1Val);
+					setSpedForP1(currentPVal);
 					measureSpeedOnlyImpPerWindow(true);
 				}
 			}break;
@@ -296,14 +295,12 @@ void loop() {
 		stopMotor();
 
 		printState("    Stopping    ");
-
-		while (currentP1Val > minPOT)
+		setSpedForP0(POT0_Default);
+		while (currentPVal > minPOT)
 		{
 			measureSpeedOnlyImpPerWindow(true);
-			currentP1Val -= 2;
-			if (currentP1Val < minPOT) currentP1Val = 0;
-			setSpedForP1(currentP1Val);
-			delay(200);
+			currentPVal -= 2;
+								
 		}
 
 		markersPerWindowActual = 0;
@@ -336,25 +333,29 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 
 		// Calculate PID terms
 		integral += error * (measureInterval / 1000.0);
+		integral = constrain(integral, -integralLimit, integralLimit); // Prevent integral windup
 		double derivative = (error - previousError) / (measureInterval / 1000.0);
 
 		// Calculate the new potentiometer value
 		double output = Kp * error + Ki * integral + Kd * derivative;
 		previousError = error;
 
-		int newPot = constrain(currentP1Val + (int)output, minPOT, maxPOT);
-		setSpedForP1(newPot);
+		// Adjust new potentiometer value for reversed control
+		int newPot = constrain(currentPVal - (int)output, minPOT, maxPOT);
+		setSpedForP0(newPot);
+
+		// Update currentPVal to the new potentiometer value
+		currentPVal = newPot;
 
 		printMeasuredSpeed(rotationsPerMinute, isAvgFound);
 		Serial.println("");
 		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
-		Serial.print(F("Markers rounded per interval: ")); Serial.println(round(markersPerWindowRequired));
 		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);
 		Serial.print(F("Markers required per 1s: ")); Serial.println(markersPerSecondRequired, 3);
-		Serial.print(F("Markers counted per 1s: ")); Serial.println(impulsesPerSecond, 3);		
-		Serial.print(F("Deviation pulses: ")); Serial.println(error);
+		Serial.print(F("Markers counted per 1s: ")); Serial.println(impulsesPerSecond, 3);
+		Serial.print(F("Error: ")); Serial.println(error);
 		Serial.print(F("New POT Value: ")); Serial.println(newPot);
-		Serial.print(F("Current P1 Value: ")); Serial.println(currentP1Val);
+		Serial.print(F("Current P1 Value: ")); Serial.println(currentPVal);
 
 		if (displayOnly) return;
 
@@ -373,6 +374,17 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 	}
 }
 
+void setSpedForP1(int value)
+{
+	writePot(MCP_ADDR, POT1, value);
+	
+}
+void setSpedForP0(int value)
+{
+	writePot(MCP_ADDR, POT0, value);
+	
+}
+
 void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 	Wire.beginTransmission(address);
 	Wire.write((pot & 3) << 4 | ((val >> 8) & 3));
@@ -380,30 +392,19 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 	Wire.endTransmission();
 }
 
+
 void stopMotor()
 {
 	disableOutput();
-	writePot(MCP_ADDR, POT1, POT0_Default);
-}
-
-void setSpedForP1(int value)
-{
-	writePot(MCP_ADDR, POT1, value);
-	currentP1Val = value;
-}
-void setSpedForP0(int value)
-{
-	writePot(MCP_ADDR, POT0, value);
-	currentP0Val = value;
 }
 
 void disableOutput()
 {
-	digitalWrite(PIN_EN, HIGH);
+	digitalWrite(PIN_EN, LOW);
 }
 void enableOutput()
 {
-	digitalWrite(PIN_EN, LOW);
+	digitalWrite(PIN_EN, HIGH);
 }
 
 double average(int* array, int size) {

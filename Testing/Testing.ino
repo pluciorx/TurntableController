@@ -20,9 +20,9 @@ void setup()
 	pinMode(fet, OUTPUT);
 	digitalWrite(fet, LOW);
 
-	writePot(MCP_ADDR, POT1, 70); //r1
+	writePot(MCP_ADDR, POT1, 127); //r1
 
-	writePot(MCP_ADDR, POT0, 120);
+	writePot(MCP_ADDR, POT0, 127);
 	Serial.println("Ready.");
 
 	/*while (1)
@@ -49,10 +49,10 @@ void loop()
 	while (!Serial.available()); // Wait for characters
 	Serial.readBytesUntil('\n', buffer, 7);
 	int state = atoi(buffer);
-	if (state == -1) digitalWrite(fet, LOW);
-	if (state == -2) digitalWrite(fet, HIGH);
-	if (state > 0 ) setSpedForP0(state);
-
+	//if (state == -1) digitalWrite(fet, LOW);
+	//if (state == -2) digitalWrite(fet, HIGH);
+	if (state >= 0 ) setSpedForP1(state);
+	if (state < 0) setSpedForP0(abs(state)); //fine tunning
 
 }
 
