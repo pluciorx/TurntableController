@@ -32,10 +32,6 @@ volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
 
-int spotPwm[5];
-volatile int idxSpt = 0;
-#define MAX_DEVITATION_MARKERS 1
-
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
 #define POT1 0x11
@@ -45,8 +41,8 @@ volatile int idxSpt = 0;
 #define  pot45  90 //ideal calibrated value for 45
 int idealPot = 0;
 
-#define minPOT pot33-10  .where
-#define maxPOT pot45+20		//do no increase value above 205 as IT WILL damage the dPOT 
+#define minPOT pot33-10  
+#define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
 volatile int currentP0Val;
@@ -59,6 +55,17 @@ int intervalFor33 = 700;
 
 int intervalFor45 = 600; //2 seconds window - increase this if the no. of markers is less for better accuracy
 //600ms  = exactly 81 markers required
+
+double Kp = 1.2;  // Proportional gain
+double Ki = 0.0;  // Integral gain
+double Kd = 0.03; // Derivative gain
+
+double previousError = 0;
+double integral = 0;
+
+int stableCount = 0;
+const int stabilityThreshold = 15;  // Number of consecutive stable intervals needed
+const double acceptableError = 0.5; // Acceptable error range for RPM
 
 int measureInterval = intervalFor33; //just a default setting
 
@@ -102,7 +109,7 @@ void setup() {
 
 	pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
-	digitalWrite(PIN_EN, HIGH);
+	disableOutput();
 
 	writePot(MCP_ADDR, POT0, POT0_Default); //r1
 	writePot(MCP_ADDR, POT1, POT0_Default); //r2
@@ -336,9 +343,9 @@ void loop() {
 	}
 }
 
-static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
-{
-	curMillis = millis();
+void measureSpeedOnlyImpPerWindow(bool displayOnly) {
+	static unsigned long lastMillis = 0;
+	unsigned long curMillis = millis();
 
 	if (curMillis >= lastMillis + measureInterval) {
 		lastMillis = curMillis;
@@ -350,105 +357,48 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 			markersPerWindowActual = 0;
 		}
 
-		// Calculate impulses per second
 		double impulsesPerSecond = numberOfPulses / (measureInterval / 1000.0);
-		// Calculate rotations per second (RPS)
 		double rotationsPerSecond = impulsesPerSecond / NUM_MARKERS;
-
-		// Calculate rotations per minute (RPM)
 		double rotationsPerMinute = rotationsPerSecond * 60;
 
-		int markersRequiredRounded = round(markersPerWindowRequired);
-		int deviatonMarkers = numberOfPulses - markersRequiredRounded;
+		double setpoint = selectedSpeed; // Desired RPM
+		double error = setpoint - rotationsPerMinute;
 
-		markersPerWindowActual = 0;
-		int absDevMarkers = abs(deviatonMarkers);
-		float devSpd = abs(rotationsPerMinute - selectedSpeed);
+		// Calculate PID terms
+		integral += error * (measureInterval / 1000.0);
+		double derivative = (error - previousError) / (measureInterval / 1000.0);
+
+		// Calculate the new potentiometer value
+		double output = Kp * error + Ki * integral + Kd * derivative;
+		previousError = error;
+
+		int newPot = constrain(currentP1Val + (int)output, minPOT, maxPOT);
+		setSpedForP1(newPot);
 
 		printMeasuredSpeed(rotationsPerMinute, isAvgFound);
-
 		Serial.println("");
-		Serial.print(F("Markers required per interval:")); Serial.println(markersPerWindowRequired, 3);
-		Serial.print(F("Markers round per interval:")); Serial.println(markersRequiredRounded);
-		Serial.print(F("Markers counted per interval:")); Serial.println(numberOfPulses);
-		Serial.print(F("Markers requred per 1s:")); Serial.println(markersPerSecondRequired, 3);
-		Serial.print(F("Markers counted per 1s:")); Serial.println(impulsesPerSecond, 3);
-		Serial.print(F("RPM calculated:")); Serial.println(rotationsPerMinute, 3);
-		Serial.print(F("Deviation pulses:")); Serial.println(deviatonMarkers);
-		Serial.print(F("ABS Deviation pulses:")); Serial.println(absDevMarkers);
-		Serial.print(F("Deviation Speed:")); Serial.println(devSpd, 3);
+		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
+		Serial.print(F("Markers rounded per interval: ")); Serial.println(round(markersPerWindowRequired));
+		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);
+		Serial.print(F("Markers required per 1s: ")); Serial.println(markersPerSecondRequired, 3);
+		Serial.print(F("Markers counted per 1s: ")); Serial.println(impulsesPerSecond, 3);		
+		Serial.print(F("Deviation pulses: ")); Serial.println(error);
+		Serial.print(F("New POT Value: ")); Serial.println(newPot);
+		Serial.print(F("Current P1 Value: ")); Serial.println(currentP1Val);
 
-		Serial.print(F("Current P1 Value:")); Serial.println(currentP1Val);
 		if (displayOnly) return;
 
-		if (absDevMarkers == 0)
-		{
-			Serial.print(F("Spot POT:")); Serial.println(currentP1Val);
-			spotPwm[idxSpt] = currentP1Val;
-			idxSpt++;
-			if (idxSpt > sizeof(spotPwm) - 1)
-			{
-				idxSpt = 0;
-				idealPot = average(spotPwm, sizeof(idxSpt));
-				Serial.print(F("Found Average:")); Serial.println(idealPot);
-
-				isAvgFound = true;
-				setSpedForP1(idealPot);
-				return;
-			}
-
+		// Check stability
+		if (abs(error) <= acceptableError) {
+			stableCount++;
 		}
-
-		if (absDevMarkers > MAX_DEVITATION_MARKERS)
-		{
+		else {
+			stableCount = 0;
 			isAvgFound = false;
-			memset(spotPwm, 0, sizeof(spotPwm));
-			idxSpt = 0;
 		}
 
-		if (!isAvgFound) {
-
-			int maxOver33, maxUnder33;
-			int adj = 1;
-			int minValue;
-			int cap;
-			int maxValue;
-
-			if (idealPot > 0)
-			{
-				if (absDevMarkers <= -1)
-				{
-					maxOver33 = 1;
-					maxUnder33 = 1;					
-				}
-
-				if (absDevMarkers >= 1)
-				{
-					maxOver33 = 2;
-					maxUnder33 = 2;					
-				}
-			}
-			int newPot = currentP1Val;
-
-			if (deviatonMarkers > 0)
-			{				
-				newPot = currentP1Val - absDevMarkers;
-				newPot = max(newPot, currentP1Val - maxUnder33);
-
-				cap = max(minPOT, newPot);
-				setSpedForP1(cap);
-				Serial.print("New POT Value:"); Serial.println(cap);
-			}
-
-			if (deviatonMarkers < 0)
-			{
-				newPot = currentP1Val + absDevMarkers;
-				newPot = min(newPot, currentP1Val + maxOver33);
-
-				cap = min(maxPOT, newPot);
-				setSpedForP1(cap);
-				Serial.print("New POT Value:"); Serial.println(cap);
-			}
+		if (stableCount >= stabilityThreshold) {
+			isAvgFound = true;
 		}
 	}
 }
@@ -485,12 +435,13 @@ void enableOutput()
 {
 	digitalWrite(PIN_EN, LOW);
 }
-float average(int* array, int len)  // assuming array is int.
-{
-	long sum = 0L;  // sum will be larger than an item, long for safety.
-	for (int i = 0; i < len; i++)
+
+double average(int* array, int size) {
+	long sum = 0;
+	for (int i = 0; i < size; i++) {
 		sum += array[i];
-	return  ((float)sum) / len;  // average will be fractional, so float may be appropriate.
+	}
+	return sum / size;
 }
 
 void SetSelectedMode(E_MODE selectedMode)
@@ -569,6 +520,9 @@ void printSelectedSpeed(double selectedSpeed)
 
 void printMeasuredSpeed(float currenMeasuredSpeed, bool isAvgFound)
 {
+	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
+	Serial.print(F(" Is Average Found: ")); Serial.println(isAvgFound);
+
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
 		/*if (isAvgFound && abs(currenMeasuredSpeed - selectedSpeed) <= 0.65)
