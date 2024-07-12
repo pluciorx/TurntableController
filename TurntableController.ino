@@ -45,13 +45,13 @@ volatile int idxSpt = 0;
 #define  pot45  90 //ideal calibrated value for 45
 int idealPot = 0;
 
-#define minPOT pot33-15
-#define maxPOT pot45+10		//do no increase value above 205 as IT WILL damage the dPOT 
+#define minPOT pot33-10  .where
+#define maxPOT pot45+20		//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentP1Val;
 volatile int currentP0Val;
 
-int intervalFor33 = 1050;
+int intervalFor33 = 700;
 //700 OK
 //350 = Ok 
 //530 - best value
@@ -234,9 +234,9 @@ void loop() {
 
 			delay(100);
 		}
+		/*delay(200);
+		setSpedForP1(target);*/
 		delay(400);
-		setSpedForP1(target + 1);
-		delay(200);
 
 		unsigned long stabMillis = millis();
 
@@ -408,55 +408,36 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 		if (!isAvgFound) {
 
-			int maxOver33, maxOver45, maxUnder33, maxUnder45;
+			int maxOver33, maxUnder33;
 			int adj = 1;
 			int minValue;
 			int cap;
 			int maxValue;
+
 			if (idealPot > 0)
 			{
 				if (absDevMarkers <= -1)
 				{
 					maxOver33 = 1;
-					maxUnder33 = 1;
-					maxOver45 = maxUnder45 = 3;
+					maxUnder33 = 1;					
 				}
 
 				if (absDevMarkers >= 1)
 				{
-					maxOver33 = 3;
-					maxUnder33 = 3;
-					maxOver45 = maxUnder45 = 6;
+					maxOver33 = 2;
+					maxUnder33 = 2;					
 				}
 			}
 			int newPot = currentP1Val;
-			if (deviatonMarkers > 0)
-			{
 
+			if (deviatonMarkers > 0)
+			{				
 				newPot = currentP1Val - absDevMarkers;
 				newPot = max(newPot, currentP1Val - maxUnder33);
-				/*switch (_mode)
-				{
-				case Auto33:
-				{
-					minValue = idealPot - maxUnder33;
-
-
-				}break;
-				case Auto45:
-				{
-					minValue = pot45 - maxUnder45;
-				} break;
-				case Manual33:
-				case Manual45:
-				{
-					minValue = minPOT;
-				} break;
-				}*/
-
 
 				cap = max(minPOT, newPot);
 				setSpedForP1(cap);
+				Serial.print("New POT Value:"); Serial.println(cap);
 			}
 
 			if (deviatonMarkers < 0)
@@ -466,6 +447,7 @@ static void  measureSpeedOnlyImpPerWindow(bool displayOnly)
 
 				cap = min(maxPOT, newPot);
 				setSpedForP1(cap);
+				Serial.print("New POT Value:"); Serial.println(cap);
 			}
 		}
 	}
