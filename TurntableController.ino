@@ -35,16 +35,16 @@ unsigned long curMillis = 0;
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
 #define POT1 0x11
-#define POT0_Default 255
+#define POT0_Default 250
 
 #define minPOT 1  
 #define maxPOT 255	//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentPVal = maxPOT;
 
-double Kp = 1;   // Increased for faster response
-double Ki = 0.1;   // Increased to reduce steady-state error
-double Kd = 0.01;  // Introduced for damping oscillations
+double Kp = 1.16;   // Increased for faster response
+double Ki = 0.05;   // Increased to reduce steady-state error
+double Kd = 0.03;  // Introduced for damping oscillations
 
 double previousError = 0;
 double integral = 0;
@@ -52,7 +52,7 @@ const double integralLimit = 100.0; // Limit for the integral term
 
 int stableCount = 0;
 const int stabilityThreshold = 10;  // Number of consecutive stable intervals needed
-const double acceptableError = 0.5; // Acceptable error range for RPM
+const double acceptableError = 0.3; // Acceptable error range for RPM
 
 int measureInterval = 350; 
 
