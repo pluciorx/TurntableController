@@ -37,14 +37,20 @@ unsigned long curMillis = 0;
 #define POT1 0x11
 #define POT0_Default 250
 
-#define minPOT 1  
+#define minPOT 0  
 #define maxPOT 255	//do no increase value above 205 as IT WILL damage the dPOT 
 
 volatile int currentPVal = maxPOT;
 
+//33.33 PID definitions 
 double Kp = 1.16;   // Increased for faster response
 double Ki = 0.05;   // Increased to reduce steady-state error
-double Kd = 0.03;  // Introduced for damping oscillations
+double Kd = 0.03;   // Introduced for damping oscillations
+
+double Kp45 = 1.10;  // Increased for faster response
+double Ki45 = 0.1;   // Increased to reduce steady-state error
+double Kd45 = 0.04;  // Introduced for damping oscillations
+
 
 double previousError = 0;
 double integral = 0;
@@ -55,6 +61,7 @@ const int stabilityThreshold = 10;  // Number of consecutive stable intervals ne
 const double acceptableError = 0.3; // Acceptable error range for RPM
 
 int measureInterval = 350; 
+int measureInterval45 = 250;
 
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
@@ -195,6 +202,10 @@ void loop() {
 		case Auto45:
 		case Manual45:
 		{
+			Kp = Kp45;   // Increased for faster response
+			Ki = Ki45;   // Increased to reduce steady-state error
+			Kd = Kd45;  // Introduced for damping oscillations
+			measureInterval = measureInterval45;
 			
 		} break;
 		default:
@@ -211,9 +222,7 @@ void loop() {
 		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
 		Serial.print("Max POT Value:"); Serial.println(minPOT);
 		Serial.print("Min POT Value:"); Serial.println(maxPOT);
-		Serial.print("Current P1 Value:"); Serial.println(currentPVal);
-
-		Serial.println("Engine starting...");
+		Serial.print("Current P1 Value:"); Serial.println(currentPVal);		
 		Serial.print("Target POT:"); Serial.println(target);
 
 		markersPerWindowActual = 0;
@@ -261,6 +270,9 @@ void loop() {
 			switch (_mode)
 			{
 			case Auto33:
+			{
+				measureSpeedOnlyImpPerWindow(false);
+			}break;
 			case Auto45:
 			{
 				measureSpeedOnlyImpPerWindow(false);
