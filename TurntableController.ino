@@ -37,20 +37,30 @@ unsigned long curMillis = 0;
 #define POT1 0x11
 #define POT0_Default 250
 
-#define minPOT 0  
-#define maxPOT 255	//do no increase value above 205 as IT WILL damage the dPOT 
+#define minPOT 1  
+#define maxPOT 255
 
 volatile int currentPVal = maxPOT;
 
-//33.33 PID definitions 
-double Kp = 1.16;   // Increased for faster response
-double Ki = 0.05;   // Increased to reduce steady-state error
-double Kd = 0.03;   // Introduced for damping oscillations
+int measureInterval;
+double Kp;   
+double Ki;   
+double Kd;   
 
-double Kp45 = 1.10;  // Increased for faster response
+//--------------------CALIBRATION---------------------
+//33.33 PID definitions 
+double Kp33 = 0.98;   // Increased for faster response
+double Ki33 = 0.06;   // Increased to reduce steady-state error
+double Kd33 = 0.05;   // Introduced for damping oscillations
+int measureInterval33 = 350;
+
+//45 definitions
+double Kp45 = 0.7;  // Increased for faster response
 double Ki45 = 0.1;   // Increased to reduce steady-state error
 double Kd45 = 0.04;  // Introduced for damping oscillations
+int measureInterval45 = 200;
 
+//--------------------CALIBRATION---------------------
 
 double previousError = 0;
 double integral = 0;
@@ -59,10 +69,6 @@ const double integralLimit = 100.0; // Limit for the integral term
 int stableCount = 0;
 const int stabilityThreshold = 10;  // Number of consecutive stable intervals needed
 const double acceptableError = 0.3; // Acceptable error range for RPM
-
-int measureInterval = 350; 
-int measureInterval45 = 250;
-
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
 
@@ -197,14 +203,18 @@ void loop() {
 		case Auto33:
 		case Manual33:
 		{
+			Kp = Kp33;
+			Ki = Ki33;
+			Kd = Kd33;
+			measureInterval = measureInterval33;
 			
 		}break;
 		case Auto45:
 		case Manual45:
 		{
-			Kp = Kp45;   // Increased for faster response
-			Ki = Ki45;   // Increased to reduce steady-state error
-			Kd = Kd45;  // Introduced for damping oscillations
+			Kp = Kp45; 
+			Ki = Ki45; 
+			Kd = Kd45; 
 			measureInterval = measureInterval45;
 			
 		} break;
