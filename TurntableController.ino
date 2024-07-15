@@ -37,15 +37,12 @@ unsigned long curMillis = 0;
 #define POT1 0x11
 #define POT0_Default 250
 
-#define minPOT 80  
-#define maxPOT 170
 
-volatile int currentPVal = maxPOT;
-
+int minPot, maxPot;
 int measureInterval;
-double Kp;   
-double Ki;   
-double Kd;   
+double Kp;
+double Ki;
+double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
@@ -53,14 +50,19 @@ double Kp33 = 1.35;   // Increased for faster response
 double Ki33 = 0.02;   // Increased to reduce steady-state error
 double Kd33 = 0.01;   // Introduced for damping oscillations
 int measureInterval33 = 350;
+#define minPOT33 80  
+#define maxPOT33 170
 
 //45 definitions
 double Kp45 = 1.2;  // Increased for faster response
 double Ki45 = 0.05;   // Increased to reduce steady-state error
 double Kd45 = 0.04;  // Introduced for damping oscillations
-int measureInterval45 = 200;
 
+int measureInterval45 = 200;
+#define minPOT45 80  
+#define maxPOT45 170
 //--------------------CALIBRATION---------------------
+volatile int currentPVal = maxPOT33;
 
 double previousError = 0;
 double integral = 0;
@@ -194,7 +196,7 @@ void loop() {
 		enableOutput();
 		printState("    Starting    ");
 		printMeasuredSpeed(0, false);
-		int x = minPOT;
+		int x = minPot;
 
 		printState("   Stabilising ");
 		int target;
@@ -207,32 +209,36 @@ void loop() {
 			Ki = Ki33;
 			Kd = Kd33;
 			measureInterval = measureInterval33;
-			
+			minPot = minPOT33;
+			maxPot = maxPOT33;
+
 		}break;
 		case Auto45:
 		case Manual45:
 		{
-			Kp = Kp45; 
-			Ki = Ki45; 
-			Kd = Kd45; 
+			Kp = Kp45;
+			Ki = Ki45;
+			Kd = Kd45;
 			measureInterval = measureInterval45;
-			
+			minPot = minPOT33;
+			maxPot = maxPOT33;
+
 		} break;
 		default:
 			break;
 		}
 		revPerSecondRequired = selectedSpeed / 60;
 		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
-		
+
 		markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
 
 		Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
 		Serial.print("Markers per/s req:"); Serial.println(markersPerSecondRequired, 3);
 		Serial.print("Measure Interval ms:"); Serial.println(measureInterval);
 		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
-		Serial.print("Max POT Value:"); Serial.println(minPOT);
-		Serial.print("Min POT Value:"); Serial.println(maxPOT);
-		Serial.print("Current P1 Value:"); Serial.println(currentPVal);		
+		Serial.print("Max POT Value:"); Serial.println(minPot);
+		Serial.print("Min POT Value:"); Serial.println(maxPot);
+		Serial.print("Current P1 Value:"); Serial.println(currentPVal);
 		Serial.print("Target POT:"); Serial.println(target);
 		Serial.print("Kp:"); Serial.println(Kp);
 		Serial.print("Ki:"); Serial.println(Ki);
@@ -321,11 +327,11 @@ void loop() {
 
 		printState("    Stopping    ");
 		setSpedForP0(POT0_Default);
-		while (currentPVal > minPOT)
+		while (currentPVal > minPot)
 		{
 			measureSpeedOnlyImpPerWindow(true);
 			currentPVal -= 2;
-								
+
 		}
 
 		markersPerWindowActual = 0;
@@ -366,7 +372,7 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 		previousError = error;
 
 		// Adjust new potentiometer value for reversed control
-		int newPot = constrain(currentPVal - (int)output, minPOT, maxPOT);
+		int newPot = constrain(currentPVal - (int)output, minPot, maxPot);
 		setSpedForP0(newPot);
 
 		// Update currentPVal to the new potentiometer value
@@ -378,7 +384,7 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);
 		Serial.print(F("Markers required per 1s: ")); Serial.println(markersPerSecondRequired, 3);
 		Serial.print(F("Markers counted per 1s: ")); Serial.println(impulsesPerSecond, 3);
-		Serial.print(F("Error: ")); Serial.println(error);		
+		Serial.print(F("Error: ")); Serial.println(error);
 		Serial.print(F("Current P0 Value: ")); Serial.println(currentPVal);
 
 		if (displayOnly) return;
@@ -401,12 +407,12 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 void setSpedForP1(int value)
 {
 	writePot(MCP_ADDR, POT1, value);
-	
+
 }
 void setSpedForP0(int value)
 {
 	writePot(MCP_ADDR, POT0, value);
-	
+
 }
 
 void writePot(uint8_t address, uint8_t pot, uint16_t val) {
