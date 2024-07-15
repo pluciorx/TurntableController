@@ -186,8 +186,6 @@ void loop() {
 				printMeasuredSpeed(0, false);
 				break;
 			}
-			//printSelectedSpeed(selectedSpeed);
-
 		}
 		SetState(E_STATE::Starting);
 	}break;
@@ -273,56 +271,38 @@ void loop() {
 			printState("      Speed     ");
 		}break;
 		case Manual33:
-		case Manual45: {
+		case Manual45: 
+		{
 			printState("-     Speed    +");
-
 		}break;
 		default: {
-
 		}break;
 
 		}
 
 		while (isPlaying)
-		{
-			updateButtons();
+		{		
+			HandleButtonsWhilePlaying();
 			switch (_mode)
 			{
 			case Auto33:
 			{
 				calclutateAndApplySpeed(false);
-				if (btnMenuEnter.isPressed() && isPlaying)
-				{
-					Serial.println("Stop Pressed");
-					isPlaying = false;
-				}
+				
 			}break;
 			case Auto45:
 			{
 				calclutateAndApplySpeed(false);
-				if (btnMenuEnter.isPressed() && isPlaying)
-				{
-					Serial.println("Stop Pressed");
-					isPlaying = false;
-				}
+				
 			}break;
 			case Manual33:
 			case Manual45:
-			{
-				if (btnMenuLeft.isPressed()) {
-
-					Serial.print("New Pot:"); Serial.println(selectedSpeed -= 0.05);
-				}
-
-				if (btnMenuRight.isPressed()) {
-					Serial.print("New Pot:"); Serial.println(selectedSpeed += 0.05);
-				}
-
+			{				
 				calclutateAndApplySpeed(true);
 
 			}break;
 			}
-
+			
 		}
 		SetState(E_STATE::Stopping);
 	}break;
@@ -385,6 +365,7 @@ void calclutateAndApplySpeed(bool displayOnly) {
 
 		printMeasuredSpeed(rotationsPerMinute, isStabilised);
 		Serial.println("");
+		Serial.print(F("Requested Speed:")); Serial.println(selectedSpeed);
 		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
 		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);
 		Serial.print(F("Markers required per 1s: ")); Serial.println(markersPerSecondRequired, 3);
@@ -414,6 +395,7 @@ void setSpedForP1(int value)
 	writePot(MCP_ADDR, POT1, value);
 
 }
+
 void setSpedForP0(int value)
 {
 	writePot(MCP_ADDR, POT0, value);
@@ -427,7 +409,6 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 	Wire.endTransmission();
 }
 
-
 void stopMotor()
 {
 	disableOutput();
@@ -437,6 +418,7 @@ void disableOutput()
 {
 	digitalWrite(PIN_EN, LOW);
 }
+
 void enableOutput()
 {
 	digitalWrite(PIN_EN, HIGH);
@@ -476,7 +458,23 @@ void SetSelectedMode(E_MODE selectedMode)
 
 void HandleButtonsWhilePlaying()
 {
+	updateButtons();
+	if (btnMenuEnter.isPressed() && isPlaying)
+	{
+		Serial.println("Stop Pressed");
+		isPlaying = false;
+	}
+	if (_mode == E_MODE::Manual33 || _mode == E_MODE::Manual45)
+	{
+		if (btnMenuLeft.isPressed()) {
 
+			Serial.print("New speed:"); Serial.println(selectedSpeed -= 0.05);
+		}
+
+		if (btnMenuRight.isPressed()) {
+			Serial.print("New speed:"); Serial.println(selectedSpeed += 0.05);
+		}
+	}
 }
 
 void updateButtons()
