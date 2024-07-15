@@ -114,13 +114,14 @@ void setup() {
 	disableOutput();
 	setSpedForP0(POT0_Default);
 	setSpedForP1(255);
+	
+	stopMotor();
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
 	curMillis = lastMillis = millis();
-	_mode = E_MODE::Auto33;
-	prev_mode = E_MODE::Auto45;
-	stopMotor();
+	SetSelectedMode(E_MODE::Auto33);	
+
 	SetState(E_STATE::Idle);
 }
 
@@ -145,8 +146,8 @@ void loop() {
 		printState("<-    Speed   ->");
 		isPlaying = false;
 		isStabilised = false;
-		printMeasuredSpeed(0, false);
-		SetSelectedMode(E_MODE::Auto33);
+		//printMeasuredSpeed(selectedSpeed);
+		SetSelectedMode(_mode);
 		while (!isPlaying)
 		{
 			updateButtons();
@@ -185,7 +186,7 @@ void loop() {
 				printMeasuredSpeed(0, false);
 				break;
 			}
-			printSelectedSpeed(selectedSpeed);
+			//printSelectedSpeed(selectedSpeed);
 
 		}
 		SetState(E_STATE::Starting);
@@ -462,6 +463,9 @@ void SetSelectedMode(E_MODE selectedMode)
 	default:
 		break;
 	}
+	prev_mode = _mode;
+	_mode = selectedMode;
+	printSelectedMode(selectedSpeed);
 	Serial.print("Selected mode:"); Serial.println(selectedSpeed);
 }
 
@@ -481,9 +485,9 @@ void updateButtons()
 	btnMenuRight.loop();
 }
 
-void printSelectedSpeed(double selectedSpeed)
+void printSelectedMode(double selectedSpeed)
 {
-	if (prev_mode != _mode) {
+	
 		char string[5];
 		// Convert float to a string:
 		dtostrf(selectedSpeed, 3, 2, string);
@@ -495,17 +499,29 @@ void printSelectedSpeed(double selectedSpeed)
 		switch (_mode)
 		{
 		case Auto33:
+		{
+			lcd.setCursor(0, 1);
+			lcd.print("A33");
+			lcd.setCursor(12, 1);
+			lcd.print("rpm");
+		}break;
 		case Auto45: {
 			lcd.setCursor(0, 1);
-			lcd.print("A");
+			lcd.print("A45");
 			lcd.setCursor(12, 1);
 			lcd.print("rpm");
 		} break;
 		case Manual33:
+		{
+			lcd.setCursor(0, 1);
+			lcd.print("M45");
+			lcd.setCursor(12, 1);
+			lcd.print("rpm");
+		}break;
 		case Manual45:
 		{
 			lcd.setCursor(0, 1);
-			lcd.print("M");
+			lcd.print("M45");
 			lcd.setCursor(12, 1);
 			lcd.print("rpm");
 		}
@@ -513,9 +529,6 @@ void printSelectedSpeed(double selectedSpeed)
 		default:
 			break;
 		}
-
-		prev_mode = _mode;
-	}
 }
 
 void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
@@ -558,6 +571,7 @@ void printState(const char* text)
 }
 
 void SetState(E_STATE newState)
-{
+{	
 	_state = _state != newState ? newState : _state;
+	
 }
