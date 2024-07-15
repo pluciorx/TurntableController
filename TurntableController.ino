@@ -50,7 +50,7 @@ double Kp33 = 1.35;   // Increased for faster response
 double Ki33 = 0.02;   // Increased to reduce steady-state error
 double Kd33 = 0.01;   // Introduced for damping oscillations
 int measureInterval33 = 350;
-#define minPOT33 80  
+#define minPOT33 85  
 #define maxPOT33 170
 
 //45 definitions
@@ -58,8 +58,8 @@ double Kp45 = 1.2;  // Increased for faster response
 double Ki45 = 0.05;   // Increased to reduce steady-state error
 double Kd45 = 0.04;  // Introduced for damping oscillations
 int measureInterval45 = 200;
-#define minPOT45 80  
-#define maxPOT45 170
+#define minPOT45 75  
+#define maxPOT45 150
 //--------------------CALIBRATION---------------------
 volatile int currentPVal = maxPOT33;
 
@@ -114,13 +114,13 @@ void setup() {
 	disableOutput();
 	setSpedForP0(POT0_Default);
 	setSpedForP1(255);
-	
+
 	stopMotor();
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 
 	curMillis = lastMillis = millis();
-	SetSelectedMode(E_MODE::Auto33);	
+	SetSelectedMode(E_MODE::Auto33);
 
 	SetState(E_STATE::Idle);
 }
@@ -249,7 +249,7 @@ void loop() {
 		while (!isStabilised)
 		{
 			updateButtons();
-			measureSpeedOnlyImpPerWindow(false);
+			calclutateAndApplySpeed(false);
 
 			if (btnMenuEnter.isPressed())
 			{
@@ -290,34 +290,39 @@ void loop() {
 			{
 			case Auto33:
 			{
-				measureSpeedOnlyImpPerWindow(false);
+				calclutateAndApplySpeed(false);
+				if (btnMenuEnter.isPressed() && isPlaying)
+				{
+					Serial.println("Stop Pressed");
+					isPlaying = false;
+				}
 			}break;
 			case Auto45:
 			{
-				measureSpeedOnlyImpPerWindow(false);
+				calclutateAndApplySpeed(false);
+				if (btnMenuEnter.isPressed() && isPlaying)
+				{
+					Serial.println("Stop Pressed");
+					isPlaying = false;
+				}
 			}break;
 			case Manual33:
 			case Manual45:
 			{
-				if (abs(markersPerWindowRequired - markersPerWindowActual) > 20)
-				{
-					measureSpeedOnlyImpPerWindow(false);
-				}
-				else
-				{
-					if (btnMenuLeft.isPressed()) {
-						Serial.print("New pwm:"); Serial.println(currentPVal--);
-					}
+				if (btnMenuLeft.isPressed()) {
 
-					if (btnMenuRight.isPressed()) {
-						Serial.print("New pwm:"); Serial.println(currentPVal++);
-					}
-					setSpedForP1(currentPVal);
-					measureSpeedOnlyImpPerWindow(true);
+					Serial.print("New Pot:"); Serial.println(selectedSpeed -= 0.05);
 				}
+
+				if (btnMenuRight.isPressed()) {
+					Serial.print("New Pot:"); Serial.println(selectedSpeed += 0.05);
+				}
+
+				calclutateAndApplySpeed(true);
+
 			}break;
 			}
-			HandleButtonsWhilePlaying();
+
 		}
 		SetState(E_STATE::Stopping);
 	}break;
@@ -329,7 +334,7 @@ void loop() {
 		setSpedForP0(POT0_Default);
 		while (currentPVal > minPot)
 		{
-			measureSpeedOnlyImpPerWindow(true);
+			calclutateAndApplySpeed(true);
 			currentPVal -= 2;
 
 		}
@@ -341,7 +346,7 @@ void loop() {
 	}
 }
 
-void measureSpeedOnlyImpPerWindow(bool displayOnly) {
+void calclutateAndApplySpeed(bool displayOnly) {
 	static unsigned long lastMillis = 0;
 	unsigned long curMillis = millis();
 
@@ -471,11 +476,7 @@ void SetSelectedMode(E_MODE selectedMode)
 
 void HandleButtonsWhilePlaying()
 {
-	if (btnMenuEnter.isPressed() && isPlaying)
-	{
-		Serial.println("Stop Pressed");
-		isPlaying = false;
-	}
+
 }
 
 void updateButtons()
@@ -487,48 +488,48 @@ void updateButtons()
 
 void printSelectedMode(double selectedSpeed)
 {
-	
-		char string[5];
-		// Convert float to a string:
-		dtostrf(selectedSpeed, 3, 2, string);
-		lcd.setCursor(6, 1);
-		lcd.print("     ");
-		lcd.setCursor(6, 1);
-		lcd.print(string);
 
-		switch (_mode)
-		{
-		case Auto33:
-		{
-			lcd.setCursor(0, 1);
-			lcd.print("A33");
-			lcd.setCursor(12, 1);
-			lcd.print("rpm");
-		}break;
-		case Auto45: {
-			lcd.setCursor(0, 1);
-			lcd.print("A45");
-			lcd.setCursor(12, 1);
-			lcd.print("rpm");
-		} break;
-		case Manual33:
-		{
-			lcd.setCursor(0, 1);
-			lcd.print("M45");
-			lcd.setCursor(12, 1);
-			lcd.print("rpm");
-		}break;
-		case Manual45:
-		{
-			lcd.setCursor(0, 1);
-			lcd.print("M45");
-			lcd.setCursor(12, 1);
-			lcd.print("rpm");
-		}
+	char string[5];
+	// Convert float to a string:
+	dtostrf(selectedSpeed, 3, 2, string);
+	lcd.setCursor(6, 1);
+	lcd.print("     ");
+	lcd.setCursor(6, 1);
+	lcd.print(string);
+
+	switch (_mode)
+	{
+	case Auto33:
+	{
+		lcd.setCursor(0, 1);
+		lcd.print("A33");
+		lcd.setCursor(12, 1);
+		lcd.print("rpm");
+	}break;
+	case Auto45: {
+		lcd.setCursor(0, 1);
+		lcd.print("A45");
+		lcd.setCursor(12, 1);
+		lcd.print("rpm");
+	} break;
+	case Manual33:
+	{
+		lcd.setCursor(0, 1);
+		lcd.print("M33");
+		lcd.setCursor(12, 1);
+		lcd.print("rpm");
+	}break;
+	case Manual45:
+	{
+		lcd.setCursor(0, 1);
+		lcd.print("M45");
+		lcd.setCursor(12, 1);
+		lcd.print("rpm");
+	}
+	break;
+	default:
 		break;
-		default:
-			break;
-		}
+	}
 }
 
 void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
@@ -571,7 +572,7 @@ void printState(const char* text)
 }
 
 void SetState(E_STATE newState)
-{	
+{
 	_state = _state != newState ? newState : _state;
-	
+
 }
