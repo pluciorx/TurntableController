@@ -57,7 +57,6 @@ int measureInterval33 = 350;
 double Kp45 = 1.2;  // Increased for faster response
 double Ki45 = 0.05;   // Increased to reduce steady-state error
 double Kd45 = 0.04;  // Introduced for damping oscillations
-
 int measureInterval45 = 200;
 #define minPOT45 80  
 #define maxPOT45 170
