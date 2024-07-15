@@ -219,8 +219,8 @@ void loop() {
 			Ki = Ki45;
 			Kd = Kd45;
 			measureInterval = measureInterval45;
-			minPot = minPOT33;
-			maxPot = maxPOT33;
+			minPot = minPOT45;
+			maxPot = maxPOT45;
 
 		} break;
 		default:
