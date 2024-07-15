@@ -20,6 +20,7 @@ ezButton btnMenuEnter(PIN_BTN_MID);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 float selectedSpeed = 33.33;
+double rotationsPerMinuteMeasured;
 volatile float prevMeasuredSpeed = -1;
 float revPerSecondRequired = 0.0;
 float markersPerSecondRequired = 0.0;
@@ -308,19 +309,17 @@ void loop() {
 	}break;
 	case Stopping:
 	{
+		setSpedForP0(POT0_Default);
 		stopMotor();
 
 		printState("    Stopping    ");
-		setSpedForP0(POT0_Default);
-		while (currentPVal > minPot)
+		
+		while ( rotationsPerMinuteMeasured > 5)
 		{
 			calclutateAndApplySpeed(true);
-			currentPVal -= 2;
-
+			
 		}
 
-		markersPerWindowActual = 0;
-		isPlaying = false;
 		SetState(E_STATE::Idle);
 	}
 	}
@@ -342,10 +341,10 @@ void calclutateAndApplySpeed(bool displayOnly) {
 
 		double impulsesPerSecond = numberOfPulses / (measureInterval / 1000.0);
 		double rotationsPerSecond = impulsesPerSecond / NUM_MARKERS;
-		double rotationsPerMinute = rotationsPerSecond * 60;
+		rotationsPerMinuteMeasured = rotationsPerSecond * 60;
 
 		double setpoint = selectedSpeed; // Desired RPM
-		double error = setpoint - rotationsPerMinute;
+		double error = setpoint - rotationsPerMinuteMeasured;
 
 		// Calculate PID terms
 		integral += error * (measureInterval / 1000.0);
@@ -358,12 +357,10 @@ void calclutateAndApplySpeed(bool displayOnly) {
 
 		// Adjust new potentiometer value for reversed control
 		int newPot = constrain(currentPVal - (int)output, minPot, maxPot);
-		setSpedForP0(newPot);
 
 		// Update currentPVal to the new potentiometer value
 		currentPVal = newPot;
-
-		printMeasuredSpeed(rotationsPerMinute, isStabilised);
+		printMeasuredSpeed(rotationsPerMinuteMeasured, isStabilised);
 		Serial.println("");
 		Serial.print(F("Requested Speed:")); Serial.println(selectedSpeed);
 		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
@@ -375,6 +372,7 @@ void calclutateAndApplySpeed(bool displayOnly) {
 
 		if (displayOnly) return;
 
+		setSpedForP0(newPot);
 		// Check stability
 		if (abs(error) <= acceptableError) {
 			stableCount++;
