@@ -47,18 +47,18 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-double Kp33 = 1.35;   // Increased for faster response
-double Ki33 = 0.02;   // Increased to reduce steady-state error
-double Kd33 = 0.01;   // Introduced for damping oscillations
-int measureInterval33 = 350;
-#define minPOT33 85  
+#define Kp33 2.2   // Increased for faster response
+#define Ki33 0.9   // Increased to reduce steady-state error
+#define Kd33 0.5   // Introduced for damping oscillations
+#define measureInterval33 250
+#define minPOT33 135  
 #define maxPOT33 170
 
 //45 definitions
-double Kp45 = 1.2;  // Increased for faster response
-double Ki45 = 0.05;   // Increased to reduce steady-state error
-double Kd45 = 0.04;  // Introduced for damping oscillations
-int measureInterval45 = 200;
+#define Kp45 2.5  // Increased for faster response
+#define Ki45 0.18  // Increased to reduce steady-state error
+#define Kd45 0.02  // Introduced for damping oscillations
+#define measureInterval45  200
 #define minPOT45 75  
 #define maxPOT45 150
 //--------------------CALIBRATION---------------------
@@ -70,7 +70,7 @@ const double integralLimit = 100.0; // Limit for the integral term
 
 int stableCount = 0;
 const int stabilityThreshold = 10;  // Number of consecutive stable intervals needed
-const double acceptableError = 0.3; // Acceptable error range for RPM
+const double acceptableError = 0.2; // Acceptable error range for RPM
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
 
@@ -284,26 +284,7 @@ void loop() {
 		while (isPlaying)
 		{		
 			HandleButtonsWhilePlaying();
-			switch (_mode)
-			{
-			case Auto33:
-			{
-				calclutateAndApplySpeed(false);
-				
-			}break;
-			case Auto45:
-			{
-				calclutateAndApplySpeed(false);
-				
-			}break;
-			case Manual33:
-			case Manual45:
-			{				
-				calclutateAndApplySpeed(true);
-
-			}break;
-			}
-			
+			calclutateAndApplySpeed(false);
 		}
 		SetState(E_STATE::Stopping);
 	}break;
