@@ -16,7 +16,6 @@ void setup()
 	Serial.begin(9600); // The baudrate of Serial monitor is set in 9600
 	//while (!Serial); // Waiting for Serial Monitor
 	Serial.println("\nI2C Scanner");
-	pinMode(fet, INPUT_PULLUP);
 	pinMode(fet, OUTPUT);
 	digitalWrite(fet, LOW);
 
@@ -51,8 +50,8 @@ void loop()
 	int state = atoi(buffer);
 	//if (state == -1) digitalWrite(fet, LOW);
 	//if (state == -2) digitalWrite(fet, HIGH);
-	if (state >= 0 ) setSpedForP1(state);
-	if (state < 0) setSpedForP0(abs(state)); //fine tunning
+	if (state >= 0 ) setSpedForP0(state);
+	if (state < 0) setSpedForP1(abs(state)); //fine tunning
 
 }
 

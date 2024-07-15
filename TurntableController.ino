@@ -26,7 +26,7 @@ float markersPerSecondRequired = 0.0;
 float markersPerWindowRequired = 0.0;
 
 volatile bool isPlaying = false;
-volatile bool isAvgFound = false;
+volatile bool isStabilised = false;
 
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
@@ -37,8 +37,8 @@ unsigned long curMillis = 0;
 #define POT1 0x11
 #define POT0_Default 250
 
-#define minPOT 1  
-#define maxPOT 255
+#define minPOT 80  
+#define maxPOT 170
 
 volatile int currentPVal = maxPOT;
 
@@ -49,14 +49,14 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-double Kp33 = 0.98;   // Increased for faster response
-double Ki33 = 0.06;   // Increased to reduce steady-state error
-double Kd33 = 0.05;   // Introduced for damping oscillations
+double Kp33 = 1.35;   // Increased for faster response
+double Ki33 = 0.02;   // Increased to reduce steady-state error
+double Kd33 = 0.01;   // Introduced for damping oscillations
 int measureInterval33 = 350;
 
 //45 definitions
-double Kp45 = 0.7;  // Increased for faster response
-double Ki45 = 0.1;   // Increased to reduce steady-state error
+double Kp45 = 1.2;  // Increased for faster response
+double Ki45 = 0.05;   // Increased to reduce steady-state error
 double Kd45 = 0.04;  // Introduced for damping oscillations
 int measureInterval45 = 200;
 
@@ -143,7 +143,7 @@ void loop() {
 		disableOutput();
 		printState("<-    Speed   ->");
 		isPlaying = false;
-		isAvgFound = false;
+		isStabilised = false;
 		printMeasuredSpeed(0, false);
 		SetSelectedMode(E_MODE::Auto33);
 		while (!isPlaying)
@@ -196,7 +196,7 @@ void loop() {
 		printMeasuredSpeed(0, false);
 		int x = minPOT;
 
-		printState(" Stabilising ");
+		printState("   Stabilising ");
 		int target;
 		switch (_mode)
 		{
@@ -234,10 +234,13 @@ void loop() {
 		Serial.print("Min POT Value:"); Serial.println(maxPOT);
 		Serial.print("Current P1 Value:"); Serial.println(currentPVal);		
 		Serial.print("Target POT:"); Serial.println(target);
+		Serial.print("Kp:"); Serial.println(Kp);
+		Serial.print("Ki:"); Serial.println(Ki);
+		Serial.print("Kd:"); Serial.println(Kd);
 
 		markersPerWindowActual = 0;
 
-		while (!isAvgFound)
+		while (!isStabilised)
 		{
 			updateButtons();
 			measureSpeedOnlyImpPerWindow(false);
@@ -369,15 +372,14 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 		// Update currentPVal to the new potentiometer value
 		currentPVal = newPot;
 
-		printMeasuredSpeed(rotationsPerMinute, isAvgFound);
+		printMeasuredSpeed(rotationsPerMinute, isStabilised);
 		Serial.println("");
 		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
 		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);
 		Serial.print(F("Markers required per 1s: ")); Serial.println(markersPerSecondRequired, 3);
 		Serial.print(F("Markers counted per 1s: ")); Serial.println(impulsesPerSecond, 3);
-		Serial.print(F("Error: ")); Serial.println(error);
-		Serial.print(F("New POT Value: ")); Serial.println(newPot);
-		Serial.print(F("Current P1 Value: ")); Serial.println(currentPVal);
+		Serial.print(F("Error: ")); Serial.println(error);		
+		Serial.print(F("Current P0 Value: ")); Serial.println(currentPVal);
 
 		if (displayOnly) return;
 
@@ -387,11 +389,11 @@ void measureSpeedOnlyImpPerWindow(bool displayOnly) {
 		}
 		else {
 			stableCount = 0;
-			isAvgFound = false;
+			isStabilised = false;
 		}
 
 		if (stableCount >= stabilityThreshold) {
-			isAvgFound = true;
+			isStabilised = true;
 		}
 	}
 }
@@ -511,14 +513,14 @@ void printSelectedSpeed(double selectedSpeed)
 	}
 }
 
-void printMeasuredSpeed(float currenMeasuredSpeed, bool isAvgFound)
+void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 {
 	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
-	Serial.print(F(" Is Average Found: ")); Serial.println(isAvgFound);
+	Serial.print(F(" Is stable: ")); Serial.println(isStabilised);
 
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
-		/*if (isAvgFound && abs(currenMeasuredSpeed - selectedSpeed) <= 0.65)
+		/*if (isStabilised && abs(#error-1) <= 0.1)
 		{
 			currenMeasuredSpeed = selectedSpeed;
 		}*/
@@ -532,7 +534,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isAvgFound)
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
 
-		if (isAvgFound && currenMeasuredSpeed == selectedSpeed) {
+		if (isStabilised) {
 
 			lcd.print("*");
 		}
