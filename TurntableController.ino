@@ -619,12 +619,13 @@ void printMenu(const E_SETUP menuState)
 	{
 	case Min33:
 	{
-		lcd.print("Min33 = "+ minPOT33);
+		lcd.print("Min33 = ");
+
 	}
 	break;
 	case Min45:
 	{
-		lcd.print("Min45 = "+ minPOT45);
+		lcd.print("Min45 = ");
 	}break;
 	case Exit:
 	{
