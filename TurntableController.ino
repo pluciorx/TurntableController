@@ -1,7 +1,7 @@
 #include <ezButton.h>
 #include <LiquidCrystal_I2C.h>
 #include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
-
+#include <EEPROM.h>
 //IR Sensor
 #define PIN_SENSOR 3
 
@@ -38,7 +38,6 @@ unsigned long curMillis = 0;
 #define POT1 0x11
 #define POT0_Default 250
 
-
 int minPot, maxPot;
 int measureInterval;
 double Kp;
@@ -47,20 +46,23 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 2.2   // Increased for faster response
-#define Ki33 0.9   // Increased to reduce steady-state error
-#define Kd33 0.5   // Introduced for damping oscillations
-#define measureInterval33 250
-#define minPOT33 135  
+#define Kp33 1.2  // Increased for faster response
+#define Ki33 0.15   // Increased to reduce steady-state error
+#define Kd33 0.02   // Introduced for damping oscillations
+#define measureInterval33 300
+int minPOT33 = 130;
 #define maxPOT33 170
+#define min33EEAddr 0
 
 //45 definitions
 #define Kp45 2.5  // Increased for faster response
 #define Ki45 0.18  // Increased to reduce steady-state error
 #define Kd45 0.02  // Introduced for damping oscillations
 #define measureInterval45  200
-#define minPOT45 75  
+int minPOT45 = 75;
 #define maxPOT45 150
+#define min45EEAddr 4
+
 //--------------------CALIBRATION---------------------
 volatile int currentPVal = maxPOT33;
 
@@ -78,7 +80,8 @@ enum E_STATE {
 	Idle,
 	Starting,
 	Running,
-	Stopping
+	Stopping,
+	Setup
 };
 
 enum E_MODE {
@@ -86,6 +89,11 @@ enum E_MODE {
 	Auto45 = 1,
 	Manual33 = 2,
 	Manual45 = 3
+};
+enum E_SETUP {
+	Min33 = 0,
+	Min45 = 1,
+	Exit = 2
 };
 
 volatile E_STATE _state;
@@ -97,6 +105,8 @@ void setup() {
 	lcd.init();
 	lcd.backlight();
 	lcd.clear();
+
+
 
 	markersPerWindowActual = 0;
 
@@ -119,11 +129,38 @@ void setup() {
 	stopMotor();
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
+	delay(100);
+	minPOT33 = readIntFromEEPROM(min33EEAddr);
+	Serial.print("Min33 Value:"); Serial.println(minPOT33);
+	minPOT45 = readIntFromEEPROM(min45EEAddr);
+	Serial.print("Min45 Value:"); Serial.println(minPOT45);
+
 
 	curMillis = lastMillis = millis();
-	SetSelectedMode(E_MODE::Auto33);
+	while (1)
+	{
+		delay(5);
+		curMillis = millis();
 
-	SetState(E_STATE::Idle);
+		if (millis() >= lastMillis + 2000) {
+			lastMillis = curMillis;
+
+			SetSelectedMode(E_MODE::Auto33);
+			SetState(E_STATE::Idle);
+
+			Serial.println("Going normal mode...");
+			break;
+		}
+		if (digitalRead(PIN_BTN_MID) == LOW)
+		{
+			SetState(E_STATE::Setup);
+			Serial.println("Entering Calibration");
+			delay(200);
+			//			digitalRead(PIN_BTN_MID) == 1
+			break;
+		}
+	}
+
 }
 
 void  interruptRoutine() {
@@ -149,6 +186,7 @@ void loop() {
 		isStabilised = false;
 		//printMeasuredSpeed(selectedSpeed);
 		SetSelectedMode(_mode);
+
 		while (!isPlaying)
 		{
 			updateButtons();
@@ -189,6 +227,11 @@ void loop() {
 			}
 		}
 		SetState(E_STATE::Starting);
+	}break;
+	case Setup:
+	{
+		HandleSetup();
+		SetState(E_STATE::Idle);
 	}break;
 	case Starting:
 	{
@@ -272,7 +315,7 @@ void loop() {
 			printState("      Speed     ");
 		}break;
 		case Manual33:
-		case Manual45: 
+		case Manual45:
 		{
 			printState("-     Speed    +");
 		}break;
@@ -282,7 +325,7 @@ void loop() {
 		}
 
 		while (isPlaying)
-		{		
+		{
 			HandleButtonsWhilePlaying();
 			calclutateAndApplySpeed(false);
 		}
@@ -294,11 +337,11 @@ void loop() {
 		stopMotor();
 
 		printState("    Stopping    ");
-		
-		while ( rotationsPerMinuteMeasured > 5)
+
+		while (rotationsPerMinuteMeasured > 5)
 		{
 			calclutateAndApplySpeed(true);
-			
+
 		}
 
 		SetState(E_STATE::Idle);
@@ -325,8 +368,9 @@ void calclutateAndApplySpeed(bool displayOnly) {
 		rotationsPerMinuteMeasured = rotationsPerSecond * 60;
 
 		double setpoint = selectedSpeed; // Desired RPM
-		double error = setpoint - rotationsPerMinuteMeasured;
 
+		double error = setpoint - rotationsPerMinuteMeasured;
+		previousError = error;
 		// Calculate PID terms
 		integral += error * (measureInterval / 1000.0);
 		integral = constrain(integral, -integralLimit, integralLimit); // Prevent integral windup
@@ -516,10 +560,10 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
-		/*if (isStabilised && abs(#error-1) <= 0.1)
+		if (isStabilised && abs(previousError) <= 0.1)
 		{
 			currenMeasuredSpeed = selectedSpeed;
-		}*/
+		}
 
 		lcd.setCursor(6, 1);
 		lcd.print("      ");
@@ -539,6 +583,24 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 
 }
 
+void writeIntIntoEEPROM(int address, int number)
+{
+	byte byte1 = number >> 8;
+	byte byte2 = number & 0xFF;
+	EEPROM.write(address, byte1);
+	EEPROM.write(address + 1, byte2);
+}
+
+int readIntFromEEPROM(int address)
+{
+	byte byte1 = EEPROM.read(address);
+	byte byte2 = EEPROM.read(address + 1);
+	return (byte1 << 8) + byte2;
+}
+/// <summary>
+/// This prints the top line of the LCD
+/// </summary>
+/// <param name="text"></param>
 void printState(const char* text)
 {
 	Serial.println(text);
@@ -548,8 +610,158 @@ void printState(const char* text)
 	lcd.print(text);
 }
 
+void printMenu(const E_SETUP menuState)
+{
+	lcd.setCursor(0, 1);
+	lcd.print("                ");
+	lcd.setCursor(1, 1);
+	switch (menuState)
+	{
+	case Min33:
+	{
+		lcd.print("Min33 = ");
+	}
+	break;
+	case Min45:
+	{
+		lcd.print("Min45 = ");
+	}break;
+	case Exit:
+	{
+		lcd.print("     Exit    ");
+	}break;
+	default:
+		break;
+	}
+}
+
+void printMenuValue(int value)
+{
+	lcd.setCursor(13, 1);
+	lcd.print("     ");
+	lcd.setCursor(13, 1);
+	lcd.print(value);
+}
+
 void SetState(E_STATE newState)
 {
 	_state = _state != newState ? newState : _state;
 
+}
+
+bool handleValueEditing(int& value)
+{
+	bool valueChanged = false;
+	if (btnMenuLeft.isPressed() && value > 0) {
+		value--; // Decrease the value with limit check
+		valueChanged = true;
+	}
+	if (btnMenuRight.isPressed()) {
+		value++; // Increase the value
+		valueChanged = true;
+	}
+	return valueChanged;
+}
+
+// Function to handle setup editing
+void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
+{
+	printState(setupName);
+	printMenuValue(value); // Show the initial value
+	int lastValue = value;
+
+	while (1)
+	{
+		updateButtons();
+
+		if (handleValueEditing(value))
+		{
+			printMenuValue(value);
+			Serial.print(setupName);
+			Serial.print(" value: ");
+			Serial.println(value);
+		}
+
+		if (btnMenuEnter.isPressed())
+		{
+			Serial.print("Saving ");
+			Serial.print(setupName);
+			Serial.print(" value...");
+			Serial.print(setupName);
+			Serial.print(" value: ");
+			Serial.println(value);
+			int addr = 0;
+			if (s_mode == E_SETUP::Min33)
+			{
+				addr = min33EEAddr;
+				minPOT33 = value;
+			}
+
+			if (s_mode == E_SETUP::Min45)
+			{
+				addr = min45EEAddr;
+				minPOT45 = value;
+			}
+			writeIntIntoEEPROM(addr, value);
+
+			printState("Saved  ");
+			delay(1000); // Delay to show "Saved" message
+			printState("   Calibration   ");
+			break;
+		}
+	}
+}
+
+void HandleSetup()
+{
+	printState("   Calibration   ");
+	E_SETUP setupType = E_SETUP::Min33;
+	
+	printMenu(setupType);
+	printMenuValue(minPOT33); // Show the initial value for Min33
+
+	while (1)
+	{
+		updateButtons();
+
+		if (btnMenuLeft.isPressed())
+		{
+			if (setupType > E_SETUP::Min33) setupType = static_cast<E_SETUP>(setupType - 1);
+			printMenu(setupType);
+			
+		}
+		if (btnMenuRight.isPressed())
+		{
+			if (setupType < E_SETUP::Exit) setupType = static_cast<E_SETUP>(setupType + 1);
+			printMenu(setupType);
+			
+		}
+
+		if (btnMenuEnter.isPressed())
+		{
+			switch (setupType)
+			{
+			case E_SETUP::Exit:
+				return; // Exit the function
+			case E_SETUP::Min33:
+				handleSetupEditing("Min33", minPOT33, setupType);
+				break;
+			case E_SETUP::Min45:
+				handleSetupEditing("Min45", minPOT45, setupType);
+				break;
+			default:
+				break;
+			}
+
+			printMenu(setupType);
+			if (setupType == E_SETUP::Min33)
+			{
+				printMenuValue(minPOT33); // Show the current value for Min33
+			}
+			else if (setupType == E_SETUP::Min45)
+			{
+				printMenuValue(minPOT45); // Show the current value for Min45
+			}
+		}
+	}
 }
