@@ -106,7 +106,8 @@ void setup() {
 	lcd.backlight();
 	lcd.clear();
 
-
+	Serial.println("");
+	Serial.println("Turntable v 1.0");
 
 	markersPerWindowActual = 0;
 
@@ -130,16 +131,19 @@ void setup() {
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 	delay(100);
-	minPOT33 = readIntFromEEPROM(min33EEAddr);
+	
+	int eMin33 = readIntFromEEPROM(min33EEAddr);
+	int eMin45 = readIntFromEEPROM(min45EEAddr);
+	minPOT33 = eMin33 > 0 ? eMin33 : minPOT33;
+	
 	Serial.print("Min33 Value:"); Serial.println(minPOT33);
-	minPOT45 = readIntFromEEPROM(min45EEAddr);
+	minPOT45 = eMin45 > 0 ? eMin45 : minPOT45;
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
-
 
 	curMillis = lastMillis = millis();
 	while (1)
 	{
-		delay(5);
+		
 		curMillis = millis();
 
 		if (millis() >= lastMillis + 2000) {
@@ -615,17 +619,19 @@ void printMenu(const E_SETUP menuState)
 	lcd.setCursor(0, 1);
 	lcd.print("                ");
 	lcd.setCursor(1, 1);
+
 	switch (menuState)
 	{
 	case Min33:
 	{
 		lcd.print("Min33 = ");
-
+		printMenuValue(minPOT33);
 	}
 	break;
 	case Min45:
 	{
 		lcd.print("Min45 = ");
+		printMenuValue(minPOT45);
 	}break;
 	case Exit:
 	{
@@ -638,9 +644,9 @@ void printMenu(const E_SETUP menuState)
 
 void printMenuValue(int value)
 {
-	lcd.setCursor(13, 1);
-	lcd.print("     ");
-	lcd.setCursor(13, 1);
+	lcd.setCursor(9, 1);
+	lcd.print("   ");
+	lcd.setCursor(9, 1);
 	lcd.print(value);
 }
 
@@ -717,7 +723,7 @@ void HandleSetup()
 {
 	printState("   Calibration   ");
 	E_SETUP setupType = E_SETUP::Min33;
-	
+
 	printMenu(setupType);
 	printMenuValue(minPOT33); // Show the initial value for Min33
 
@@ -729,13 +735,13 @@ void HandleSetup()
 		{
 			if (setupType > E_SETUP::Min33) setupType = static_cast<E_SETUP>(setupType - 1);
 			printMenu(setupType);
-			
+
 		}
 		if (btnMenuRight.isPressed())
 		{
 			if (setupType < E_SETUP::Exit) setupType = static_cast<E_SETUP>(setupType + 1);
 			printMenu(setupType);
-			
+
 		}
 
 		if (btnMenuEnter.isPressed())
