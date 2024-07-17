@@ -28,6 +28,8 @@ float markersPerWindowRequired = 0.0;
 
 volatile bool isPlaying = false;
 volatile bool isStabilised = false;
+#define VWEEAdddr 6
+int IsUltraPrecisionEnabled = 0;
 
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
@@ -93,7 +95,8 @@ enum E_MODE {
 enum E_SETUP {
 	Min33 = 0,
 	Min45 = 1,
-	Exit = 2
+	UltraPrecision = 2,
+	Exit = 3
 };
 
 volatile E_STATE _state;
@@ -130,20 +133,24 @@ void setup() {
 	stopMotor();
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
-	delay(100);
+	printState(" Machina czasu ");
 	
 	int eMin33 = readIntFromEEPROM(min33EEAddr);
 	int eMin45 = readIntFromEEPROM(min45EEAddr);
+	int isVW = readIntFromEEPROM(VWEEAdddr);
+
 	minPOT33 = eMin33 > 0 ? eMin33 : minPOT33;
-	
-	Serial.print("Min33 Value:"); Serial.println(minPOT33);
 	minPOT45 = eMin45 > 0 ? eMin45 : minPOT45;
+	IsUltraPrecisionEnabled = isVW > 0 ? 1 : 0;
+
+
+	Serial.print("Min33 Value:"); Serial.println(minPOT33);
+
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
 
 	curMillis = lastMillis = millis();
 	while (1)
 	{
-		
 		curMillis = millis();
 
 		if (millis() >= lastMillis + 2000) {
@@ -564,7 +571,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
-		if (isStabilised && abs(previousError) <= 0.1)
+		if (IsUltraPrecisionEnabled && abs(previousError) <= 0.6)
 		{
 			currenMeasuredSpeed = selectedSpeed;
 		}
@@ -694,8 +701,6 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			Serial.print("Saving ");
 			Serial.print(setupName);
 			Serial.print(" value...");
-			Serial.print(setupName);
-			Serial.print(" value: ");
 			Serial.println(value);
 			int addr = 0;
 			if (s_mode == E_SETUP::Min33)
@@ -709,9 +714,15 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 				addr = min45EEAddr;
 				minPOT45 = value;
 			}
+
+			if (s_mode == E_SETUP::UltraPrecision)
+			{
+				addr = VWEEAdddr;
+				IsUltraPrecisionEnabled = value;
+			}
 			writeIntIntoEEPROM(addr, value);
 
-			printState("Saved  ");
+			printState("Saved");
 			delay(1000); // Delay to show "Saved" message
 			printState("   Calibration   ");
 			break;
@@ -751,10 +762,13 @@ void HandleSetup()
 			case E_SETUP::Exit:
 				return; // Exit the function
 			case E_SETUP::Min33:
-				handleSetupEditing("Min33", minPOT33, setupType);
+				handleSetupEditing("     Min33   ", minPOT33, setupType);
 				break;
 			case E_SETUP::Min45:
-				handleSetupEditing("Min45", minPOT45, setupType);
+				handleSetupEditing("     Min45   ", minPOT45, setupType);
+				break;
+			case E_SETUP::UltraPrecision:
+				handleSetupEditing("Ultra Precision", IsUltraPrecisionEnabled, setupType);
 				break;
 			default:
 				break;
