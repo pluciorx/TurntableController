@@ -12,6 +12,7 @@
 #define PIN_BTN_LEFT 5
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
+#define BTN_DEBOUNCE_MS 80
 
 ButtonControl  btnMenuRight(PIN_BTN_RIGHT);
 ButtonControl  btnMenuLeft(PIN_BTN_LEFT);
@@ -51,7 +52,7 @@ double Kd;
 #define Kp33 1.35  // Increased for faster response
 #define Ki33 0.12   // Increased to reduce steady-state error
 #define Kd33 0.02   // Introduced for damping oscillations
-#define measureInterval33 200
+#define measureInterval33 350
 int minPOT33 = 130;
 #define maxPOT33 184
 #define min33EEAddr 0
@@ -138,12 +139,12 @@ void setup() {
 	Serial.print("Ultra Precision:"); Serial.println(IsUltraPrecisionEnabled);
 	Serial.print("Min33 Value:"); Serial.println(minPOT33);
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
-	
+
 	curMillis = lastMillis = millis();
 	while (1)
 	{
 		curMillis = millis();
-		
+
 		if (millis() >= lastMillis + 2000) {
 			lastMillis = curMillis;
 
@@ -404,7 +405,7 @@ void calclutateAndApplySpeed(bool displayOnly) {
 		}
 		else {
 			stableCount = 0;
-			isStabilised = false;
+			//isStabilised = false;
 		}
 
 		if (stableCount >= stabilityThreshold) {
@@ -558,7 +559,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
 	Serial.print(F(" Is stable: ")); Serial.println(isStabilised);
 	bool isVW = false;
-	if (isStabilised && IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 1.9) {
+	if (IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 1.9) {
 		isVW = true;
 		currenMeasuredSpeed = selectedSpeed;
 	}
@@ -714,7 +715,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 	{
 		updateButtons();
 
-		if (handleValueEditing(value,s_mode))
+		if (handleValueEditing(value, s_mode))
 		{
 			printMenuValue(value);
 			Serial.print(setupName);
@@ -723,7 +724,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 		}
 
 		if (btnMenuEnter.click())
-		{			
+		{
 			Serial.print("Saving ");
 			Serial.print(setupName);
 			Serial.print(" value...");
@@ -749,7 +750,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			writeIntIntoEEPROM(addr, value);
 
 			printState("Saved");
-			
+
 			printState("   Calibration   ");
 			break;
 		}
