@@ -15,7 +15,7 @@
 
 ezButton btnMenuRight(PIN_BTN_RIGHT, INPUT);
 ezButton btnMenuLeft(PIN_BTN_LEFT, INPUT);
-ezButton btnMenuEnter(PIN_BTN_MID);
+ezButton btnMenuEnter(PIN_BTN_MID, INPUT);
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
