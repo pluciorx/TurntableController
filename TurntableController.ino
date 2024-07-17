@@ -568,7 +568,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
 	Serial.print(F(" Is stable: ")); Serial.println(isStabilised);
 	bool isVW = false;
-	if (isStabilised && IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 0.5) {
+	if (isStabilised && IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 1.9) {
 		isVW = true;
 		currenMeasuredSpeed = selectedSpeed;
 	}
