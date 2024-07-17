@@ -29,7 +29,7 @@ float markersPerWindowRequired = 0.0;
 volatile bool isPlaying = false;
 volatile bool isStabilised = false;
 #define VWEEAdddr 6
-int IsUltraPrecisionEnabled = 0;
+int IsUltraPrecisionEnabled = false;
 
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
@@ -134,20 +134,19 @@ void setup() {
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 	printState(" Machina czasu ");
-	
+
 	int eMin33 = readIntFromEEPROM(min33EEAddr);
 	int eMin45 = readIntFromEEPROM(min45EEAddr);
 	int isVW = readIntFromEEPROM(VWEEAdddr);
 
 	minPOT33 = eMin33 > 0 ? eMin33 : minPOT33;
 	minPOT45 = eMin45 > 0 ? eMin45 : minPOT45;
-	IsUltraPrecisionEnabled = isVW > 0 ? 1 : 0;
+	IsUltraPrecisionEnabled = isVW > 0 ? true : false;
 
-
+	Serial.print("Ultra Precision:"); Serial.println(IsUltraPrecisionEnabled);
 	Serial.print("Min33 Value:"); Serial.println(minPOT33);
-
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
-
+	delay(200);
 	curMillis = lastMillis = millis();
 	while (1)
 	{
@@ -568,14 +567,13 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 {
 	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
 	Serial.print(F(" Is stable: ")); Serial.println(isStabilised);
-
+	bool isVW = false;
+	if (isStabilised && IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 0.5) {
+		isVW = true;
+		currenMeasuredSpeed = selectedSpeed;
+	}
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
-		if (IsUltraPrecisionEnabled && abs(previousError) <= 0.6)
-		{
-			currenMeasuredSpeed = selectedSpeed;
-		}
-
 		lcd.setCursor(6, 1);
 		lcd.print("      ");
 		lcd.setCursor(6, 1);
@@ -585,7 +583,7 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
 
-		if (isStabilised) {
+		if (isVW) {
 
 			lcd.print("*");
 		}
@@ -640,6 +638,11 @@ void printMenu(const E_SETUP menuState)
 		lcd.print("Min45 = ");
 		printMenuValue(minPOT45);
 	}break;
+	case UltraPrecision:
+	{
+		lcd.print("Ultra = ");
+		printMenuValue(IsUltraPrecisionEnabled ? "True" : "False");
+	}break;
 	case Exit:
 	{
 		lcd.print("     Exit    ");
@@ -652,11 +655,17 @@ void printMenu(const E_SETUP menuState)
 void printMenuValue(int value)
 {
 	lcd.setCursor(9, 1);
+	lcd.print("     ");
+	lcd.setCursor(9, 1);
+	lcd.print(value);
+}
+void printMenuValue(const char* value)
+{
+	lcd.setCursor(9, 1);
 	lcd.print("   ");
 	lcd.setCursor(9, 1);
 	lcd.print(value);
 }
-
 void SetState(E_STATE newState)
 {
 	_state = _state != newState ? newState : _state;
@@ -698,6 +707,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 
 		if (btnMenuEnter.isPressed())
 		{
+			delay(5);
 			Serial.print("Saving ");
 			Serial.print(setupName);
 			Serial.print(" value...");
@@ -718,7 +728,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			if (s_mode == E_SETUP::UltraPrecision)
 			{
 				addr = VWEEAdddr;
-				IsUltraPrecisionEnabled = value;
+				IsUltraPrecisionEnabled = value > 0 ? true : false;
 			}
 			writeIntIntoEEPROM(addr, value);
 
@@ -768,8 +778,9 @@ void HandleSetup()
 				handleSetupEditing("     Min45   ", minPOT45, setupType);
 				break;
 			case E_SETUP::UltraPrecision:
+			{
 				handleSetupEditing("Ultra Precision", IsUltraPrecisionEnabled, setupType);
-				break;
+			}break;
 			default:
 				break;
 			}
