@@ -1,4 +1,4 @@
-#include <ezButton.h>
+#include <ButtonControl.h>  //https://github.com/fellipecouto/ButtonControl
 #include <LiquidCrystal_I2C.h>
 #include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
 #include <EEPROM.h>
@@ -12,10 +12,11 @@
 #define PIN_BTN_LEFT 5
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
+#define BTN_DEBOUNCE_MS 80
 
-ezButton btnMenuRight(PIN_BTN_RIGHT, INPUT);
-ezButton btnMenuLeft(PIN_BTN_LEFT, INPUT);
-ezButton btnMenuEnter(PIN_BTN_MID, INPUT);
+ButtonControl  btnMenuRight(PIN_BTN_RIGHT);
+ButtonControl  btnMenuLeft(PIN_BTN_LEFT);
+ButtonControl  btnMenuEnter(PIN_BTN_MID);
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -114,14 +115,6 @@ void setup() {
 
 	markersPerWindowActual = 0;
 
-	pinMode(PIN_BTN_LEFT, INPUT_PULLUP);
-	pinMode(PIN_BTN_RIGHT, INPUT_PULLUP);
-	pinMode(PIN_BTN_MID, INPUT_PULLUP);
-
-	btnMenuEnter.setDebounceTime(100);
-	btnMenuLeft.setDebounceTime(100);
-	btnMenuRight.setDebounceTime(100);
-
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
 
 	//pinMode(PIN_EN, INPUT_PULLUP);
@@ -146,12 +139,12 @@ void setup() {
 	Serial.print("Ultra Precision:"); Serial.println(IsUltraPrecisionEnabled);
 	Serial.print("Min33 Value:"); Serial.println(minPOT33);
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
-	delay(200);
+	
 	curMillis = lastMillis = millis();
 	while (1)
 	{
 		curMillis = millis();
-
+		
 		if (millis() >= lastMillis + 2000) {
 			lastMillis = curMillis;
 
@@ -161,12 +154,10 @@ void setup() {
 			Serial.println("Going normal mode...");
 			break;
 		}
-		if (digitalRead(PIN_BTN_MID) == LOW)
+		if (btnMenuEnter.click())
 		{
 			SetState(E_STATE::Setup);
 			Serial.println("Entering Calibration");
-			delay(200);
-			//			digitalRead(PIN_BTN_MID) == 1
 			break;
 		}
 	}
@@ -185,7 +176,7 @@ void  interruptRoutine() {
 }
 
 void loop() {
-	updateButtons();
+	//updateButtons();
 	switch (_state)
 	{
 	case Idle:
@@ -201,7 +192,7 @@ void loop() {
 		{
 			updateButtons();
 
-			if (btnMenuLeft.isPressed()) {
+			if (btnMenuLeft.click()) {
 				Serial.println("Btn Left Pressed");
 				if (_mode != E_MODE::Auto33)
 				{
@@ -214,7 +205,7 @@ void loop() {
 				SetSelectedMode(_mode);
 			}
 
-			if (btnMenuRight.isPressed()) {
+			if (btnMenuRight.click()) {
 				Serial.println("Btn Right Pressed");
 				if (_mode != E_MODE::Auto45)
 				{
@@ -227,7 +218,7 @@ void loop() {
 				SetSelectedMode(_mode);
 			}
 
-			if (btnMenuEnter.isPressed())
+			if (btnMenuEnter.click())
 			{
 				Serial.println("Play Pressed");
 				markersPerWindowActual = 0;
@@ -303,7 +294,7 @@ void loop() {
 			updateButtons();
 			calclutateAndApplySpeed(false);
 
-			if (btnMenuEnter.isPressed())
+			if (btnMenuEnter.click())
 			{
 				Serial.println("Stop");
 				SetState(E_STATE::Stopping);
@@ -492,19 +483,19 @@ void SetSelectedMode(E_MODE selectedMode)
 void HandleButtonsWhilePlaying()
 {
 	updateButtons();
-	if (btnMenuEnter.isPressed() && isPlaying)
+	if (btnMenuEnter.click() && isPlaying)
 	{
 		Serial.println("Stop Pressed");
 		isPlaying = false;
 	}
 	if (_mode == E_MODE::Manual33 || _mode == E_MODE::Manual45)
 	{
-		if (btnMenuLeft.isPressed()) {
+		if (btnMenuLeft.click()) {
 
 			Serial.print("New speed:"); Serial.println(selectedSpeed -= 0.05);
 		}
 
-		if (btnMenuRight.isPressed()) {
+		if (btnMenuRight.click()) {
 			Serial.print("New speed:"); Serial.println(selectedSpeed += 0.05);
 		}
 	}
@@ -512,9 +503,9 @@ void HandleButtonsWhilePlaying()
 
 void updateButtons()
 {
-	btnMenuEnter.loop();
-	btnMenuLeft.loop();
-	btnMenuRight.loop();
+	//btnMenuEnter.loop();
+	//btnMenuLeft.loop();
+	//btnMenuRight.loop();
 }
 
 void printSelectedMode(double selectedSpeed)
@@ -680,11 +671,11 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 	case Min33:
 	case Min45:
 	{
-		if (btnMenuLeft.isPressed() && value > 0) {
+		if (btnMenuLeft.click() && value > 0) {
 			value--; // Decrease the value with limit check
 			valueChanged = true;
 		}
-		if (btnMenuRight.isPressed() && value < 254) {
+		if (btnMenuRight.click() && value < 254) {
 			value++; // Increase the value
 			valueChanged = true;
 		}
@@ -692,11 +683,11 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 	break;
 	case UltraPrecision: // only 0 and 1 are allowed
 	{
-		if (btnMenuLeft.isPressed() && value > 0) {
+		if (btnMenuLeft.click() && value > 0) {
 			value--; // Decrease the value with limit check
 			valueChanged = true;
 		}
-		if (btnMenuRight.isPressed() && value < 1) {
+		if (btnMenuRight.click() && value < 1) {
 			value++; // Increase the value
 			valueChanged = true;
 		}
@@ -732,7 +723,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			Serial.println(value);
 		}
 
-		if (btnMenuEnter.isPressed())
+		if (btnMenuEnter.click())
 		{			
 			Serial.print("Saving ");
 			Serial.print(setupName);
@@ -778,20 +769,26 @@ void HandleSetup()
 	{
 		updateButtons();
 
-		if (btnMenuLeft.isPressed())
+		if (btnMenuLeft.click())
 		{
-			if (setupType > E_SETUP::Min33) setupType = static_cast<E_SETUP>(setupType - 1);
-			printMenu(setupType);
+			if (setupType > E_SETUP::Min33)
+			{
+				setupType = static_cast<E_SETUP>(setupType - 1);
+				printMenu(setupType);
+			}
 
 		}
-		if (btnMenuRight.isPressed())
+		if (btnMenuRight.click())
 		{
-			if (setupType < E_SETUP::Exit) setupType = static_cast<E_SETUP>(setupType + 1);
-			printMenu(setupType);
+			if (setupType < E_SETUP::Exit)
+			{
+				setupType = static_cast<E_SETUP>(setupType + 1);
+				printMenu(setupType);
+			}
 
 		}
 
-		if (btnMenuEnter.isPressed())
+		if (btnMenuEnter.click())
 		{
 			switch (setupType)
 			{
