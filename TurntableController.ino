@@ -672,17 +672,44 @@ void SetState(E_STATE newState)
 
 }
 
-bool handleValueEditing(int& value)
+bool handleValueEditing(int& value, E_SETUP s_mode)
 {
 	bool valueChanged = false;
-	if (btnMenuLeft.isPressed() && value > 0) {
-		value--; // Decrease the value with limit check
-		valueChanged = true;
+	switch (s_mode)
+	{
+	case Min33:
+	case Min45:
+	{
+		if (btnMenuLeft.isPressed() && value > 0) {
+			value--; // Decrease the value with limit check
+			valueChanged = true;
+		}
+		if (btnMenuRight.isPressed() && value < 254) {
+			value++; // Increase the value
+			valueChanged = true;
+		}
 	}
-	if (btnMenuRight.isPressed()) {
-		value++; // Increase the value
-		valueChanged = true;
+	break;
+	case UltraPrecision: // only 0 and 1 are allowed
+	{
+		if (btnMenuLeft.isPressed() && value > 0) {
+			value--; // Decrease the value with limit check
+			valueChanged = true;
+		}
+		if (btnMenuRight.isPressed() && value < 1) {
+			value++; // Increase the value
+			valueChanged = true;
+		}
 	}
+	break;
+	case Exit:
+		break;
+	default:
+		break;
+	}
+
+
+
 	return valueChanged;
 }
 
