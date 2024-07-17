@@ -48,20 +48,20 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 1.2  // Increased for faster response
-#define Ki33 0.15   // Increased to reduce steady-state error
+#define Kp33 1.35  // Increased for faster response
+#define Ki33 0.12   // Increased to reduce steady-state error
 #define Kd33 0.02   // Introduced for damping oscillations
-#define measureInterval33 300
+#define measureInterval33 200
 int minPOT33 = 130;
-#define maxPOT33 170
+#define maxPOT33 184
 #define min33EEAddr 0
 
 //45 definitions
-#define Kp45 2.5  // Increased for faster response
-#define Ki45 0.18  // Increased to reduce steady-state error
-#define Kd45 0.02  // Introduced for damping oscillations
+#define Kp45 1.5  // Increased for faster response
+#define Ki45 0.008  // Increased to reduce steady-state error
+#define Kd45 0.002  // Introduced for damping oscillations
 #define measureInterval45  200
-int minPOT45 = 75;
+int minPOT45 = 140;
 #define maxPOT45 150
 #define min45EEAddr 4
 
@@ -119,8 +119,8 @@ void setup() {
 	pinMode(PIN_BTN_MID, INPUT_PULLUP);
 
 	btnMenuEnter.setDebounceTime(100);
-	btnMenuLeft.setDebounceTime(50);
-	btnMenuRight.setDebounceTime(50);
+	btnMenuLeft.setDebounceTime(100);
+	btnMenuRight.setDebounceTime(100);
 
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
 
@@ -724,7 +724,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 	{
 		updateButtons();
 
-		if (handleValueEditing(value))
+		if (handleValueEditing(value,s_mode))
 		{
 			printMenuValue(value);
 			Serial.print(setupName);
@@ -733,8 +733,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 		}
 
 		if (btnMenuEnter.isPressed())
-		{
-			delay(5);
+		{			
 			Serial.print("Saving ");
 			Serial.print(setupName);
 			Serial.print(" value...");
@@ -760,7 +759,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			writeIntIntoEEPROM(addr, value);
 
 			printState("Saved");
-			delay(1000); // Delay to show "Saved" message
+			
 			printState("   Calibration   ");
 			break;
 		}
