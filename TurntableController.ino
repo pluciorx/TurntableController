@@ -185,7 +185,7 @@ void loop() {
 		printState("<-    Speed   ->");
 		isPlaying = false;
 		isStabilised = false;
-		//printMeasuredSpeed(selectedSpeed);
+		
 		SetSelectedMode(_mode);
 
 		while (!isPlaying)
@@ -559,10 +559,13 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
 	Serial.print(F(" Is stable: ")); Serial.println(isStabilised);
 	bool isVW = false;
-	if (IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 1.9) {
+	if (isStabilised && IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 1.9) {
 		isVW = true;
 		currenMeasuredSpeed = selectedSpeed;
 	}
+	else
+		if (abs(currenMeasuredSpeed - selectedSpeed) >= 1.9) isVW = false;
+
 	if (prevMeasuredSpeed != currenMeasuredSpeed)
 	{
 		lcd.setCursor(6, 1);
@@ -574,12 +577,14 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
 
-		if (isVW) {
-
-			lcd.print("*");
-		}
-		else lcd.print(" ");
+		
 	}
+	lcd.setCursor(15, 1);
+	if (isVW) {
+
+		lcd.print("*");
+	}
+	else lcd.print(" ");
 
 }
 
