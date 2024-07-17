@@ -12,7 +12,6 @@
 #define PIN_BTN_LEFT 5
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
-#define BTN_DEBOUNCE_MS 80
 
 ButtonControl  btnMenuRight(PIN_BTN_RIGHT);
 ButtonControl  btnMenuLeft(PIN_BTN_LEFT);
