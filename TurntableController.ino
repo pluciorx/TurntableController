@@ -58,8 +58,8 @@ int minPOT33 = 130;
 
 //45 definitions
 #define Kp45 1.5  // Increased for faster response
-#define Ki45 0.008  // Increased to reduce steady-state error
-#define Kd45 0.002  // Introduced for damping oscillations
+#define Ki45 0.08  // Increased to reduce steady-state error
+#define Kd45 0.02  // Introduced for damping oscillations
 #define measureInterval45  200
 int minPOT45 = 140;
 #define maxPOT45 150
@@ -73,8 +73,8 @@ double integral = 0;
 const double integralLimit = 100.0; // Limit for the integral term
 
 int stableCount = 0;
-const int stabilityThreshold = 10;  // Number of consecutive stable intervals needed
-const double acceptableError = 0.2; // Acceptable error range for RPM
+const int stabilityThreshold = 20;  // Number of consecutive stable intervals needed
+const double acceptableError = 0.1; // Acceptable error range for RPM
 
 #define NUM_MARKERS 180 //TO DO: Check this as per your setup 200
 
