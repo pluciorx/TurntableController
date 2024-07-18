@@ -24,9 +24,15 @@
     <ClCompile Include="C:\Users\pluci\OneDrive\Documents\Arduino\libraries\avdweb_VirtualDelay\avdweb_VirtualDelay.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="KalmanFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.TurntableController.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KalmanFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

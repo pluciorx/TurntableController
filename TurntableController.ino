@@ -259,30 +259,20 @@ void loop() {
 		int x = minPot;
 
 		printState("   Stabilising ");
-		int target;
+
 		switch (_mode)
 		{
 		case Auto33:
 		case Manual33:
 		{
-			Kp = Kp33;
-			Ki = Ki33;
-			Kd = Kd33;
-			measureInterval = measureInterval33;
-			minPot = minPOT33;
-			maxPot = maxPOT33;
+			setPIDParams(Kp33, Ki33, Kd33, measureInterval33, minPOT33, maxPOT33);
 
 		}break;
 		case Auto45:
 		case Manual45:
 		{
-			Kp = Kp45;
-			Ki = Ki45;
-			Kd = Kd45;
-			measureInterval = measureInterval45;
-			minPot = minPOT45;
-			maxPot = maxPOT45;
-
+			setPIDParams(Kp45, Ki45, Kd45, measureInterval45, minPOT45, maxPOT45);
+			
 		} break;
 		default:
 			break;
@@ -299,7 +289,6 @@ void loop() {
 		Serial.print("Max POT Value:"); Serial.println(minPot);
 		Serial.print("Min POT Value:"); Serial.println(maxPot);
 		Serial.print("Current P1 Value:"); Serial.println(currentPVal);
-		Serial.print("Target POT:"); Serial.println(target);
 		Serial.print("Kp:"); Serial.println(Kp);
 		Serial.print("Ki:"); Serial.println(Ki);
 		Serial.print("Kd:"); Serial.println(Kd);
@@ -646,6 +635,16 @@ void printMenu(const E_SETUP menuState)
 	default:
 		break;
 	}
+}
+
+void setPIDParams(double _Kp, double _Ki, double _Kd, int _measureInterval,int _minPot, int _maxPot)
+{
+	Kp = _Kp;
+	Ki = _Ki;
+	Kd = _Kd;
+	measureInterval = _measureInterval;
+	minPot = _minPot;
+	maxPot = _maxPot;
 }
 
 void printMenuValue(int value)
