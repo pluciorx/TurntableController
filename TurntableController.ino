@@ -123,11 +123,9 @@ void setup() {
 
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
-	disableOutput();
+	EnableEngine(false);
 	setSpedForP0(POT0_Default);
-	setSpedForP1(255);
-
-	stopMotor();
+	setSpedForP1(255);	
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 	printState(" Machina czasu ");
@@ -201,7 +199,7 @@ void loop() {
 	{
 	case Idle:
 	{
-		disableOutput();
+		EnableEngine(false);
 		printState("<-    Speed   ->");
 		isPlaying = false;
 		isStabilised = false;
@@ -254,8 +252,8 @@ void loop() {
 	}break;
 	case Starting:
 	{
-		enableStrobe(true);
-		enableOutput();
+		
+		EnableEngine(true);
 		printState("    Starting    ");
 		printMeasuredSpeed(0, false);
 		int x = minPot;
@@ -353,7 +351,7 @@ void loop() {
 	case Stopping:
 	{
 		setSpedForP0(POT0_Default);
-		stopMotor();
+		EnableEngine(false);
 
 		printState("    Stopping    ");
 
@@ -362,7 +360,7 @@ void loop() {
 			calclutateAndApplySpeed(true);
 
 		}
-		enableStrobe(false);
+		
 		SetState(E_STATE::Idle);
 	}
 	}
@@ -451,20 +449,10 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 	Wire.endTransmission();
 }
 
-void stopMotor()
+void EnableEngine(bool isEnabled)
 {
-	
-	disableOutput();
-}
-
-void disableOutput()
-{
-	digitalWrite(PIN_EN, LOW);
-}
-
-void enableOutput()
-{
-	digitalWrite(PIN_EN, HIGH);
+	enableStrobe(isEnabled);
+	digitalWrite(PIN_EN, isEnabled);
 }
 
 double average(int* array, int size) {
