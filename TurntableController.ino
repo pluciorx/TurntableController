@@ -13,6 +13,8 @@
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
 #define BTN_DEBOUNCE_MS 80
+#define PIN_STROBE_LED1 11
+#define PIN_STROBE_LED2 12
 
 ButtonControl  btnMenuRight(PIN_BTN_RIGHT);
 ButtonControl  btnMenuLeft(PIN_BTN_LEFT);
@@ -29,8 +31,11 @@ float markersPerWindowRequired = 0.0;
 
 volatile bool isPlaying = false;
 volatile bool isStabilised = false;
-#define VWEEAdddr 6
+#define EE_ADDR_VW 6
 int IsUltraPrecisionEnabled = false;
+
+#define EE_ADDR_STROBE 10
+int IsStrobeEnabled = false;
 
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
@@ -55,7 +60,7 @@ double Kd;
 #define measureInterval33 350
 int minPOT33 = 130;
 #define maxPOT33 184
-#define min33EEAddr 0
+#define EE_ADDR_33 0
 
 //45 definitions
 #define Kp45 1.5  // Increased for faster response
@@ -64,7 +69,7 @@ int minPOT33 = 130;
 #define measureInterval45  200
 int minPOT45 = 140;
 #define maxPOT45 150
-#define min45EEAddr 4
+#define EE_ADDR_45 4
 
 //--------------------CALIBRATION---------------------
 volatile int currentPVal = maxPOT33;
@@ -97,7 +102,8 @@ enum E_SETUP {
 	Min33 = 0,
 	Min45 = 1,
 	UltraPrecision = 2,
-	Exit = 3
+	Strobe = 3,
+	Exit = 4
 };
 
 volatile E_STATE _state;
@@ -123,22 +129,31 @@ void setup() {
 	setSpedForP0(POT0_Default);
 	setSpedForP1(255);
 
+	pinMode(PIN_STROBE_LED1, OUTPUT);  
+	pinMode(PIN_STROBE_LED2, OUTPUT);
+
 	stopMotor();
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 	printState(" Machina czasu ");
 
-	int eMin33 = readIntFromEEPROM(min33EEAddr);
-	int eMin45 = readIntFromEEPROM(min45EEAddr);
-	int isVW = readIntFromEEPROM(VWEEAdddr);
+	int eMin33 = readIntFromEEPROM(EE_ADDR_33);
+	int eMin45 = readIntFromEEPROM(EE_ADDR_45);
 
 	minPOT33 = eMin33 > 0 ? eMin33 : minPOT33;
 	minPOT45 = eMin45 > 0 ? eMin45 : minPOT45;
-	IsUltraPrecisionEnabled = isVW > 0 ? true : false;
+	IsUltraPrecisionEnabled = readIntFromEEPROM(EE_ADDR_VW) > 0 ? true : false;
+	IsStrobeEnabled = readIntFromEEPROM(EE_ADDR_STROBE) > 0 ? true : false;
+	
 
+	Serial.print("Strobe:"); Serial.println(IsStrobeEnabled);
 	Serial.print("Ultra Precision:"); Serial.println(IsUltraPrecisionEnabled);
 	Serial.print("Min33 Value:"); Serial.println(minPOT33);
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
+	
+	//code from Artur as is
+	
+	//END TIMER SETUP
 
 	curMillis = lastMillis = millis();
 	while (1)
@@ -162,6 +177,44 @@ void setup() {
 		}
 	}
 
+}
+
+void enableStrobe(bool isEnabled)
+{
+	cli();
+	// turn on CTC mode
+	TCCR1A = 0;// set entire TCCR1A register to 0
+	TCCR1B = 0;// same for TCCR1B
+	TCCR1B |= (1 << WGM12);
+	// Set CS11 bit for prescaler 8
+	TCCR1B |= (1 << CS11);
+
+	//initialize counter value to 0;
+	TCNT1 = 0;
+
+	// set timer count for 50Hz increments
+	OCR1A = 39999;// = (16*10^6) / (50*8) - 1  
+	if (isEnabled) {
+		// enable timer compare interrupt
+		TIMSK1 |= (1 << OCIE1A);
+	}
+	else
+	{
+		//disable interrupt
+		TIMSK1 &= ~(1 << OCIE1A);
+	}
+
+	sei();
+}
+
+ISR(TIMER1_COMPA_vect) {
+	digitalWrite(11, HIGH);
+	delay(20);
+	digitalWrite(11, LOW);
+
+	digitalWrite(12, HIGH);
+	delay(2);
+	digitalWrite(12, LOW);
 }
 
 void  interruptRoutine() {
@@ -190,8 +243,6 @@ void loop() {
 
 		while (!isPlaying)
 		{
-			updateButtons();
-
 			if (btnMenuLeft.click()) {
 				Serial.println("Btn Left Pressed");
 				if (_mode != E_MODE::Auto33)
@@ -236,6 +287,7 @@ void loop() {
 	}break;
 	case Starting:
 	{
+		enableStrobe(true);
 		enableOutput();
 		printState("    Starting    ");
 		printMeasuredSpeed(0, false);
@@ -291,7 +343,6 @@ void loop() {
 
 		while (!isStabilised)
 		{
-			updateButtons();
 			calclutateAndApplySpeed(false);
 
 			if (btnMenuEnter.click())
@@ -344,7 +395,7 @@ void loop() {
 			calclutateAndApplySpeed(true);
 
 		}
-
+		enableStrobe(false);
 		SetState(E_STATE::Idle);
 	}
 	}
@@ -435,6 +486,7 @@ void writePot(uint8_t address, uint8_t pot, uint16_t val) {
 
 void stopMotor()
 {
+	
 	disableOutput();
 }
 
@@ -482,7 +534,6 @@ void SetSelectedMode(E_MODE selectedMode)
 
 void HandleButtonsWhilePlaying()
 {
-	updateButtons();
 	if (btnMenuEnter.click() && isPlaying)
 	{
 		Serial.println("Stop Pressed");
@@ -501,16 +552,8 @@ void HandleButtonsWhilePlaying()
 	}
 }
 
-void updateButtons()
-{
-	//btnMenuEnter.loop();
-	//btnMenuLeft.loop();
-	//btnMenuRight.loop();
-}
-
 void printSelectedMode(double selectedSpeed)
 {
-
 	char string[5];
 	// Convert float to a string:
 	dtostrf(selectedSpeed, 3, 2, string);
@@ -576,8 +619,6 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 		lcd.print("rpm");
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
-
-		
 	}
 	lcd.setCursor(15, 1);
 	if (isVW) {
@@ -585,7 +626,6 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 		lcd.print("*");
 	}
 	else lcd.print(" ");
-
 }
 
 void writeIntIntoEEPROM(int address, int number)
@@ -639,6 +679,11 @@ void printMenu(const E_SETUP menuState)
 		lcd.print("Ultra = ");
 		printMenuValue(IsUltraPrecisionEnabled ? "True" : "False");
 	}break;
+	case Strobe:
+	{
+		lcd.print("Strobe = ");
+		printMenuValue(IsStrobeEnabled ? "True" : "False");
+	}break;
 	case Exit:
 	{
 		lcd.print("     Exit    ");
@@ -651,15 +696,15 @@ void printMenu(const E_SETUP menuState)
 void printMenuValue(int value)
 {
 	lcd.setCursor(9, 1);
-	lcd.print("     ");
+	lcd.print("       ");
 	lcd.setCursor(9, 1);
 	lcd.print(value);
 }
 void printMenuValue(const char* value)
 {
-	lcd.setCursor(9, 1);
-	lcd.print("   ");
-	lcd.setCursor(9, 1);
+	lcd.setCursor(10, 1);
+	lcd.print("      ");
+	lcd.setCursor(10, 1);
 	lcd.print(value);
 }
 void SetState(E_STATE newState)
@@ -686,6 +731,7 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 		}
 	}
 	break;
+	case Strobe: 	
 	case UltraPrecision: // only 0 and 1 are allowed
 	{
 		if (btnMenuLeft.click() && value > 0) {
@@ -704,8 +750,6 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 		break;
 	}
 
-
-
 	return valueChanged;
 }
 
@@ -718,8 +762,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 
 	while (1)
 	{
-		updateButtons();
-
+		
 		if (handleValueEditing(value, s_mode))
 		{
 			printMenuValue(value);
@@ -737,20 +780,26 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			int addr = 0;
 			if (s_mode == E_SETUP::Min33)
 			{
-				addr = min33EEAddr;
+				addr = EE_ADDR_33;
 				minPOT33 = value;
 			}
 
 			if (s_mode == E_SETUP::Min45)
 			{
-				addr = min45EEAddr;
+				addr = EE_ADDR_45;
 				minPOT45 = value;
 			}
 
 			if (s_mode == E_SETUP::UltraPrecision)
 			{
-				addr = VWEEAdddr;
+				addr = EE_ADDR_VW;
 				IsUltraPrecisionEnabled = value > 0 ? true : false;
+			}
+
+			if (s_mode == E_SETUP::Strobe)
+			{
+				addr = EE_ADDR_STROBE;
+				IsStrobeEnabled = value > 0 ? true : false;
 			}
 			writeIntIntoEEPROM(addr, value);
 
@@ -771,9 +820,7 @@ void HandleSetup()
 	printMenuValue(minPOT33); // Show the initial value for Min33
 
 	while (1)
-	{
-		updateButtons();
-
+	{	
 		if (btnMenuLeft.click())
 		{
 			if (setupType > E_SETUP::Min33)
@@ -781,7 +828,6 @@ void HandleSetup()
 				setupType = static_cast<E_SETUP>(setupType - 1);
 				printMenu(setupType);
 			}
-
 		}
 		if (btnMenuRight.click())
 		{
@@ -790,38 +836,41 @@ void HandleSetup()
 				setupType = static_cast<E_SETUP>(setupType + 1);
 				printMenu(setupType);
 			}
-
 		}
 
 		if (btnMenuEnter.click())
 		{
 			switch (setupType)
 			{
-			case E_SETUP::Exit:
+			case Exit:
 				return; // Exit the function
-			case E_SETUP::Min33:
+			case Min33:
 				handleSetupEditing("     Min33   ", minPOT33, setupType);
 				break;
-			case E_SETUP::Min45:
+			case Min45:
 				handleSetupEditing("     Min45   ", minPOT45, setupType);
 				break;
-			case E_SETUP::UltraPrecision:
+			case UltraPrecision:
 			{
 				handleSetupEditing("Ultra Precision", IsUltraPrecisionEnabled, setupType);
+			}break;
+			case Strobe:
+			{
+				handleSetupEditing("     Strobe", IsStrobeEnabled, setupType);
 			}break;
 			default:
 				break;
 			}
 
-			printMenu(setupType);
-			if (setupType == E_SETUP::Min33)
-			{
-				printMenuValue(minPOT33); // Show the current value for Min33
-			}
-			else if (setupType == E_SETUP::Min45)
-			{
-				printMenuValue(minPOT45); // Show the current value for Min45
-			}
+			//printMenu(setupType);
+			//if (setupType == E_SETUP::Min33)
+			//{
+			//	printMenuValue(minPOT33); // Show the current value for Min33
+			//}
+			//else if (setupType == E_SETUP::Min45)
+			//{
+			//	printMenuValue(minPOT45); // Show the current value for Min45
+			//}
 		}
 	}
 }
