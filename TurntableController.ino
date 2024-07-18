@@ -181,30 +181,33 @@ void setup() {
 
 void enableStrobe(bool isEnabled)
 {
-	cli();
-	// turn on CTC mode
-	TCCR1A = 0;// set entire TCCR1A register to 0
-	TCCR1B = 0;// same for TCCR1B
-	TCCR1B |= (1 << WGM12);
-	// Set CS11 bit for prescaler 8
-	TCCR1B |= (1 << CS11);
-
-	//initialize counter value to 0;
-	TCNT1 = 0;
-
-	// set timer count for 50Hz increments
-	OCR1A = 39999;// = (16*10^6) / (50*8) - 1  
-	if (isEnabled) {
-		// enable timer compare interrupt
-		TIMSK1 |= (1 << OCIE1A);
-	}
-	else
+	if (IsStrobeEnabled)
 	{
-		//disable interrupt
-		TIMSK1 &= ~(1 << OCIE1A);
-	}
+		cli();
+		// turn on CTC mode
+		TCCR1A = 0;// set entire TCCR1A register to 0
+		TCCR1B = 0;// same for TCCR1B
+		TCCR1B |= (1 << WGM12);
+		// Set CS11 bit for prescaler 8
+		TCCR1B |= (1 << CS11);
 
-	sei();
+		//initialize counter value to 0;
+		TCNT1 = 0;
+
+		// set timer count for 50Hz increments
+		OCR1A = 39999;// = (16*10^6) / (50*8) - 1  
+		if (isEnabled) {
+			// enable timer compare interrupt
+			TIMSK1 |= (1 << OCIE1A);
+		}
+		else
+		{
+			//disable interrupt
+			TIMSK1 &= ~(1 << OCIE1A);
+		}
+
+		sei();
+	}
 }
 
 ISR(TIMER1_COMPA_vect) {
