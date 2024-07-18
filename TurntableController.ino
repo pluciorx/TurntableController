@@ -127,9 +127,6 @@ void setup() {
 	setSpedForP0(POT0_Default);
 	setSpedForP1(255);
 
-	pinMode(PIN_STROBE_LED1, OUTPUT);  
-	pinMode(PIN_STROBE_LED2, OUTPUT);
-
 	stopMotor();
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
