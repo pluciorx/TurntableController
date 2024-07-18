@@ -13,8 +13,6 @@
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
 #define BTN_DEBOUNCE_MS 80
-#define PIN_STROBE_LED1 11
-#define PIN_STROBE_LED2 12
 
 ButtonControl  btnMenuRight(PIN_BTN_RIGHT);
 ButtonControl  btnMenuLeft(PIN_BTN_LEFT);
@@ -183,42 +181,11 @@ void enableStrobe(bool isEnabled)
 {
 	if (IsStrobeEnabled)
 	{
-		cli();
-		// turn on CTC mode
-		TCCR1A = 0;// set entire TCCR1A register to 0
-		TCCR1B = 0;// same for TCCR1B
-		TCCR1B |= (1 << WGM12);
-		// Set CS11 bit for prescaler 8
-		TCCR1B |= (1 << CS11);
 
-		//initialize counter value to 0;
-		TCNT1 = 0;
-
-		// set timer count for 50Hz increments
-		OCR1A = 39999;// = (16*10^6) / (50*8) - 1  
-		if (isEnabled) {
-			// enable timer compare interrupt
-			TIMSK1 |= (1 << OCIE1A);
-		}
-		else
-		{
-			//disable interrupt
-			TIMSK1 &= ~(1 << OCIE1A);
-		}
-
-		sei();
 	}
 }
 
-ISR(TIMER1_COMPA_vect) {
-	digitalWrite(11, HIGH);
-	delay(20);
-	digitalWrite(11, LOW);
 
-	digitalWrite(12, HIGH);
-	delay(2);
-	digitalWrite(12, LOW);
-}
 
 void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
