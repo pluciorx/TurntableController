@@ -52,8 +52,8 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 0.066  // Increased for faster response
-#define Ki33 0.004   // Increased to reduce steady-state error
+#define Kp33 0.067  // Increased for faster response
+#define Ki33 0.0045   // Increased to reduce steady-state error
 #define Kd33 0.022   // Introduced for damping oscillations
 #define measureInterval33 350
 int minPOT33 = 30;
@@ -755,7 +755,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 
 			printState("Saved");
 
-			printState("   Calibration   ");
+			printState("   Ustawienia   ");
 			break;
 		}
 	}
@@ -763,7 +763,7 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 
 void HandleSetup()
 {
-	printState("   Calibration   ");
+	printState("   Ustawienia   ");
 	E_SETUP setupType = E_SETUP::Min33;
 
 	printMenu(setupType);
