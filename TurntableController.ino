@@ -52,10 +52,10 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 1.35  // Increased for faster response
-#define Ki33 0.12   // Increased to reduce steady-state error
-#define Kd33 0.02   // Introduced for damping oscillations
-#define measureInterval33 350
+#define Kp33 0.05  // Increased for faster response
+#define Ki33 0.01   // Increased to reduce steady-state error
+#define Kd33 0.15   // Introduced for damping oscillations
+#define measureInterval33 200
 int minPOT33 = 130;
 #define maxPOT33 184
 #define EE_ADDR_33 0
@@ -63,7 +63,7 @@ int minPOT33 = 130;
 //45 definitions
 #define Kp45 1.5  // Increased for faster response
 #define Ki45 0.08  // Increased to reduce steady-state error
-#define Kd45 0.02  // Introduced for damping oscillations
+#define Kd45 0.002  // Introduced for damping oscillations
 #define measureInterval45  200
 int minPOT45 = 140;
 #define maxPOT45 150
@@ -96,6 +96,7 @@ enum E_MODE {
 	Manual33 = 2,
 	Manual45 = 3
 };
+
 enum E_SETUP {
 	Min33 = 0,
 	Min45 = 1,
@@ -124,8 +125,8 @@ void setup() {
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
 	EnableEngine(false);
-	setSpedForP0(POT0_Default);
-	setSpedForP1(255);	
+	setSpeedForP0(POT0_Default);
+	setSpeedForP1(255);	
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 	printState(" Machina czasu ");
@@ -297,7 +298,7 @@ void loop() {
 
 		while (!isStabilised)
 		{
-			calclutateAndApplySpeed(false);
+			calculateAndApplySpeed(false);
 
 			if (btnMenuEnter.click())
 			{
@@ -333,20 +334,20 @@ void loop() {
 		while (isPlaying)
 		{
 			HandleButtonsWhilePlaying();
-			calclutateAndApplySpeed(false);
+			calculateAndApplySpeed(false);
 		}
 		SetState(E_STATE::Stopping);
 	}break;
 	case Stopping:
 	{
-		setSpedForP0(POT0_Default);
+		setSpeedForP0(POT0_Default);
 		EnableEngine(false);
 
 		printState("    Stopping    ");
 
 		while (rotationsPerMinuteMeasured > 5)
 		{
-			calclutateAndApplySpeed(true);
+			calculateAndApplySpeed(true);
 
 		}
 		
@@ -355,7 +356,7 @@ void loop() {
 	}
 }
 
-void calclutateAndApplySpeed(bool displayOnly) {
+void calculateAndApplySpeed(bool displayOnly) {
 	static unsigned long lastMillis = 0;
 	unsigned long curMillis = millis();
 
@@ -376,7 +377,7 @@ void calclutateAndApplySpeed(bool displayOnly) {
 		double setpoint = selectedSpeed; // Desired RPM
 
 		double error = setpoint - rotationsPerMinuteMeasured;
-		previousError = error;
+
 		// Calculate PID terms
 		integral += error * (measureInterval / 1000.0);
 		integral = constrain(integral, -integralLimit, integralLimit); // Prevent integral windup
@@ -387,7 +388,7 @@ void calclutateAndApplySpeed(bool displayOnly) {
 		previousError = error;
 
 		// Adjust new potentiometer value for reversed control
-		int newPot = constrain(currentPVal - (int)output, minPot, maxPot);
+		int newPot = constrain(currentPVal + (int)output, minPot, maxPot); // Reverse logic by adding output
 
 		// Update currentPVal to the new potentiometer value
 		currentPVal = newPot;
@@ -402,15 +403,15 @@ void calclutateAndApplySpeed(bool displayOnly) {
 		Serial.print(F("Current P0 Value: ")); Serial.println(currentPVal);
 
 		if (displayOnly) return;
+		
+	    setSpeedForP0(newPot);
 
-		setSpedForP0(newPot);
 		// Check stability
 		if (abs(error) <= acceptableError) {
 			stableCount++;
 		}
 		else {
 			stableCount = 0;
-			//isStabilised = false;
 		}
 
 		if (stableCount >= stabilityThreshold) {
@@ -419,13 +420,13 @@ void calclutateAndApplySpeed(bool displayOnly) {
 	}
 }
 
-void setSpedForP1(int value)
+void setSpeedForP1(int value)
 {
 	writePot(MCP_ADDR, POT1, value);
 
 }
 
-void setSpedForP0(int value)
+void setSpeedForP0(int value)
 {
 	writePot(MCP_ADDR, POT0, value);
 
