@@ -52,11 +52,11 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 0.06  // Increased for faster response
-#define Ki33 0.00   // Increased to reduce steady-state error
-#define Kd33 0.02   // Introduced for damping oscillations
-#define measureInterval33 200
-int minPOT33 = 130;
+#define Kp33 0.066  // Increased for faster response
+#define Ki33 0.004   // Increased to reduce steady-state error
+#define Kd33 0.022   // Introduced for damping oscillations
+#define measureInterval33 350
+int minPOT33 = 30;
 #define maxPOT33 184
 #define EE_ADDR_33 0
 
