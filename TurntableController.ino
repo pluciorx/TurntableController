@@ -129,7 +129,7 @@ void setup() {
 	setSpeedForP1(255);	
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
-	printState(" Machina czasu ");
+	printState("  Machina czasu ");
 
 	int eMin33 = readIntFromEEPROM(EE_ADDR_33);
 	int eMin45 = readIntFromEEPROM(EE_ADDR_45);
@@ -139,16 +139,11 @@ void setup() {
 	IsUltraPrecisionEnabled = readIntFromEEPROM(EE_ADDR_VW) > 0 ? true : false;
 	IsStrobeEnabled = readIntFromEEPROM(EE_ADDR_STROBE) > 0 ? true : false;
 	
-
 	Serial.print("Strobe:"); Serial.println(IsStrobeEnabled);
 	Serial.print("Ultra Precision:"); Serial.println(IsUltraPrecisionEnabled);
 	Serial.print("Min33 Value:"); Serial.println(minPOT33);
 	Serial.print("Min45 Value:"); Serial.println(minPOT45);
 	
-	//code from Artur as is
-	
-	//END TIMER SETUP
-
 	curMillis = lastMillis = millis();
 	while (1)
 	{
@@ -201,7 +196,7 @@ void loop() {
 	case Idle:
 	{
 		EnableEngine(false);
-		printState("<-    Speed   ->");
+		printState("<-    Tryb    ->");
 		isPlaying = false;
 		isStabilised = false;
 		
@@ -255,11 +250,11 @@ void loop() {
 	{
 		
 		EnableEngine(true);
-		printState("    Starting    ");
+		printState("    Start    ");
 		printMeasuredSpeed(0, false);
 		int x = minPot;
 
-		printState("   Stabilising ");
+		printState("   Stabilizacja ");
 
 		switch (_mode)
 		{
@@ -319,12 +314,12 @@ void loop() {
 		case Auto33:
 		case Auto45:
 		{
-			printState("      Speed     ");
+			printState("    Predkosc    ");
 		}break;
 		case Manual33:
 		case Manual45:
 		{
-			printState("-     Speed    +");
+			printState("-   Predkosc    +");
 		}break;
 		default: {
 		}break;
@@ -343,7 +338,7 @@ void loop() {
 		setSpeedForP0(POT0_Default);
 		EnableEngine(false);
 
-		printState("    Stopping    ");
+		printState("    Stop    ");
 
 		while (rotationsPerMinuteMeasured > 5)
 		{
