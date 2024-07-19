@@ -52,12 +52,12 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 0.067  // Increased for faster response
-#define Ki33 0.0045   // Increased to reduce steady-state error
-#define Kd33 0.022   // Introduced for damping oscillations
+#define Kp33 0.085  // Increased for faster response
+#define Ki33 0.0059   // Increased to reduce steady-state error
+#define Kd33 0.023   // Introduced for damping oscillations
 #define measureInterval33 350
 int minPOT33 = 30;
-#define maxPOT33 184
+#define maxPOT33 200
 #define EE_ADDR_33 0
 
 //45 definitions
@@ -65,8 +65,8 @@ int minPOT33 = 30;
 #define Ki45 0.08  // Increased to reduce steady-state error
 #define Kd45 0.002  // Introduced for damping oscillations
 #define measureInterval45  200
-int minPOT45 = 140;
-#define maxPOT45 150
+int minPOT45 = 60;
+#define maxPOT45 255
 #define EE_ADDR_45 4
 
 //--------------------CALIBRATION---------------------
@@ -149,7 +149,7 @@ void setup() {
 	{
 		curMillis = millis();
 
-		if (millis() >= lastMillis + 2000) {
+		if (millis() >= lastMillis + 1500) {
 			lastMillis = curMillis;
 
 			SetSelectedMode(E_MODE::Auto33);
