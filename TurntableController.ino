@@ -388,7 +388,7 @@ void calculateAndApplySpeed(bool displayOnly) {
 		previousError = error;
 
 		// Adjust new potentiometer value for reversed control
-		int newPot = constrain(currentPVal + (int)output, minPot, maxPot); // Reverse logic by adding output
+		int newPot = constrain(currentPVal - (int)output, minPot, maxPot); // Reverse logic by adding output
 
 		// Update currentPVal to the new potentiometer value
 		currentPVal = newPot;
