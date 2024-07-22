@@ -52,18 +52,18 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 0.085  // Increased for faster response
-#define Ki33 0.0059   // Increased to reduce steady-state error
-#define Kd33 0.023   // Introduced for damping oscillations
-#define measureInterval33 350
+#define Kp33 1.30  // Increased for faster response
+#define Ki33 0.00   // Increased to reduce steady-state error
+#define Kd33 1.10   // Introduced for damping oscillations
+#define measureInterval33 200
 int minPOT33 = 30;
 #define maxPOT33 200
 #define EE_ADDR_33 0
 
 //45 definitions
-#define Kp45 1.5  // Increased for faster response
-#define Ki45 0.08  // Increased to reduce steady-state error
-#define Kd45 0.002  // Introduced for damping oscillations
+#define Kp45 1.3  // Increased for faster response
+#define Ki45 0.00  // Increased to reduce steady-state error
+#define Kd45 1.1  // Introduced for damping oscillations
 #define measureInterval45  200
 int minPOT45 = 60;
 #define maxPOT45 255
@@ -74,7 +74,7 @@ volatile int currentPVal = maxPOT33;
 
 double previousError = 0;
 double integral = 0;
-const double integralLimit = 100.0; // Limit for the integral term
+const double integralLimit = 100; // Limit for the integral term
 
 int stableCount = 0;
 const int stabilityThreshold = 20;  // Number of consecutive stable intervals needed
@@ -105,18 +105,17 @@ enum E_SETUP {
 	Exit = 4
 };
 
-volatile E_STATE _state;
-volatile E_MODE _mode;
-volatile E_MODE prev_mode;
+E_STATE _state;
+E_MODE _mode;
 
 void setup() {
-	Serial.begin(115200);
+	Serial.begin(9600);
 	lcd.init();
 	lcd.backlight();
 	lcd.clear();
 
-	Serial.println("");
-	Serial.println("Turntable v 1.0");
+	Serial.println();
+	Serial.println(F("Turntable v 1.0"));
 
 	markersPerWindowActual = 0;
 
@@ -126,10 +125,10 @@ void setup() {
 	pinMode(PIN_EN, OUTPUT);
 	EnableEngine(false);
 	setSpeedForP0(POT0_Default);
-	setSpeedForP1(255);	
+	setSpeedForP1(255);
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
-	printState("  Machina czasu ");
+	printState(F("  Machina czasu "));
 
 	int eMin33 = readIntFromEEPROM(EE_ADDR_33);
 	int eMin45 = readIntFromEEPROM(EE_ADDR_45);
@@ -138,12 +137,12 @@ void setup() {
 	minPOT45 = eMin45 > 0 ? eMin45 : minPOT45;
 	IsUltraPrecisionEnabled = readIntFromEEPROM(EE_ADDR_VW) > 0 ? true : false;
 	IsStrobeEnabled = readIntFromEEPROM(EE_ADDR_STROBE) > 0 ? true : false;
-	
-	Serial.print("Strobe:"); Serial.println(IsStrobeEnabled);
-	Serial.print("Ultra Precision:"); Serial.println(IsUltraPrecisionEnabled);
-	Serial.print("Min33 Value:"); Serial.println(minPOT33);
-	Serial.print("Min45 Value:"); Serial.println(minPOT45);
-	
+
+	Serial.print(F("Strobe:")); Serial.println(IsStrobeEnabled);
+	Serial.print(F("Ultra Precision:")); Serial.println(IsUltraPrecisionEnabled);
+	Serial.print(F("Min33 Value:")); Serial.println(minPOT33);
+	Serial.print(F("Min45 Value:")); Serial.println(minPOT45);
+
 	curMillis = lastMillis = millis();
 	while (1)
 	{
@@ -155,13 +154,13 @@ void setup() {
 			SetSelectedMode(E_MODE::Auto33);
 			SetState(E_STATE::Idle);
 
-			Serial.println("Going normal mode...");
+			Serial.println(F("Going normal mode..."));
 			break;
 		}
 		if (btnMenuEnter.click())
 		{
 			SetState(E_STATE::Setup);
-			Serial.println("Entering Calibration");
+			Serial.println(F("Entering Calibration"));
 			break;
 		}
 	}
@@ -190,164 +189,165 @@ void  interruptRoutine() {
 }
 
 void loop() {
+	Serial.println("Idle...");
 	//updateButtons();
 	switch (_state)
 	{
-	case Idle:
-	{
-		EnableEngine(false);
-		printState("<-    Tryb    ->");
-		isPlaying = false;
-		isStabilised = false;
-		
-		SetSelectedMode(_mode);
-
-		while (!isPlaying)
+		case Idle:
 		{
-			if (btnMenuLeft.click()) {
-				Serial.println("Btn Left Pressed");
-				if (_mode != E_MODE::Auto33)
-				{
-					_mode = E_MODE::Auto33;
-				}
-				else
-					if (_mode == E_MODE::Auto33) {
-						_mode = E_MODE::Manual33;
-					}
-				SetSelectedMode(_mode);
-			}
+			EnableEngine(false);
+			printState(F("<-    Tryb    ->"));
+			isPlaying = false;
+			isStabilised = false;
 
-			if (btnMenuRight.click()) {
-				Serial.println("Btn Right Pressed");
-				if (_mode != E_MODE::Auto45)
-				{
-					_mode = E_MODE::Auto45;
-				}
-				else
-					if (_mode == E_MODE::Auto45) {
-						_mode = E_MODE::Manual45;
-					}
-				SetSelectedMode(_mode);
-			}
+			SetSelectedMode(_mode);
 
-			if (btnMenuEnter.click())
+			while (!isPlaying)
 			{
-				Serial.println("Play Pressed");
-				markersPerWindowActual = 0;
-				isPlaying = true;
-				printMeasuredSpeed(0, false);
+				if (btnMenuLeft.click()) {
+					Serial.println(F("Btn Left Pressed"));
+					if (_mode != E_MODE::Auto33)
+					{
+						_mode = E_MODE::Auto33;
+					}
+					else
+						if (_mode == E_MODE::Auto33) {
+							_mode = E_MODE::Manual33;
+						}
+					SetSelectedMode(_mode);
+				}
+
+				if (btnMenuRight.click()) {
+					Serial.println(F("Btn Right Pressed"));
+					if (_mode != E_MODE::Auto45)
+					{
+						_mode = E_MODE::Auto45;
+					}
+					else
+						if (_mode == E_MODE::Auto45) {
+							_mode = E_MODE::Manual45;
+						}
+					SetSelectedMode(_mode);
+				}
+
+				if (btnMenuEnter.click())
+				{
+					Serial.println(F("Play Pressed"));
+					markersPerWindowActual = 0;
+					isPlaying = true;
+					printMeasuredSpeed(0, false);
+					break;
+				}
+			}
+			SetState(E_STATE::Starting);
+		}break;
+		case Setup:
+		{
+			HandleSetup();
+			SetState(E_STATE::Idle);
+		}break;
+		case Starting:
+		{
+
+			EnableEngine(true);
+			printState(F("    Start    "));
+			printMeasuredSpeed(0, false);
+			int x = minPot;
+
+			printState(F("  Stabilizacja "));
+
+			switch (_mode)
+			{
+			case Auto33:
+			case Manual33:
+			{
+				setPIDParams(Kp33, Ki33, Kd33, measureInterval33, minPOT33, maxPOT33);
+
+			}break;
+			case Auto45:
+			case Manual45:
+			{
+				setPIDParams(Kp45, Ki45, Kd45, measureInterval45, minPOT45, maxPOT45);
+
+			} break;
+			default:
 				break;
 			}
-		}
-		SetState(E_STATE::Starting);
-	}break;
-	case Setup:
-	{
-		HandleSetup();
-		SetState(E_STATE::Idle);
-	}break;
-	case Starting:
-	{
-		
-		EnableEngine(true);
-		printState("    Start    ");
-		printMeasuredSpeed(0, false);
-		int x = minPot;
+			revPerSecondRequired = selectedSpeed / 60;
+			markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
 
-		printState("   Stabilizacja ");
+			markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
 
-		switch (_mode)
-		{
-		case Auto33:
-		case Manual33:
-		{
-			setPIDParams(Kp33, Ki33, Kd33, measureInterval33, minPOT33, maxPOT33);
+			Serial.print(F("Rev's per/s req:")); Serial.println(revPerSecondRequired, 3);
+			Serial.print(F("Markers per/s req:")); Serial.println(markersPerSecondRequired, 3);
+			Serial.print(F("Measure Interval ms:")); Serial.println(measureInterval);
+			Serial.print(F("Pulses required per/windows:")); Serial.println(markersPerWindowRequired, 3);
+			Serial.print(F("Max POT Value:")); Serial.println(minPot);
+			Serial.print(F("Min POT Value:")); Serial.println(maxPot);
+			Serial.print(F("Current P1 Value:")); Serial.println(currentPVal);
+			Serial.print(F("Kp:")); Serial.println(Kp);
+			Serial.print(F("Ki:")); Serial.println(Ki);
+			Serial.print(F("Kd:")); Serial.println(Kd);
 
-		}break;
-		case Auto45:
-		case Manual45:
-		{
-			setPIDParams(Kp45, Ki45, Kd45, measureInterval45, minPOT45, maxPOT45);
-			
-		} break;
-		default:
-			break;
-		}
-		revPerSecondRequired = selectedSpeed / 60;
-		markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
+			markersPerWindowActual = 0;
 
-		markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
-
-		Serial.print("Rev's per/s req:"); Serial.println(revPerSecondRequired, 3);
-		Serial.print("Markers per/s req:"); Serial.println(markersPerSecondRequired, 3);
-		Serial.print("Measure Interval ms:"); Serial.println(measureInterval);
-		Serial.print("Pulses required per/windows:"); Serial.println(markersPerWindowRequired, 3);
-		Serial.print("Max POT Value:"); Serial.println(minPot);
-		Serial.print("Min POT Value:"); Serial.println(maxPot);
-		Serial.print("Current P1 Value:"); Serial.println(currentPVal);
-		Serial.print("Kp:"); Serial.println(Kp);
-		Serial.print("Ki:"); Serial.println(Ki);
-		Serial.print("Kd:"); Serial.println(Kd);
-
-		markersPerWindowActual = 0;
-
-		while (!isStabilised)
-		{
-			calculateAndApplySpeed(false);
-
-			if (btnMenuEnter.click())
+			while (!isStabilised)
 			{
-				Serial.println("Stop");
-				SetState(E_STATE::Stopping);
-				return;
+				calculateAndApplySpeed(false);
+
+				if (btnMenuEnter.click())
+				{
+					Serial.println(F("Stop"));
+					SetState(E_STATE::Stopping);
+					return;
+				}
 			}
-		}
 
-		isPlaying = true;
-		SetState(E_STATE::Running);
+			isPlaying = true;
+			SetState(E_STATE::Running);
 
-	}break;
-	case Running:
-	{
-		switch (_mode)
-		{
-		case Auto33:
-		case Auto45:
-		{
-			printState("    Predkosc    ");
 		}break;
-		case Manual33:
-		case Manual45:
+		case Running:
 		{
-			printState("-   Predkosc    +");
+			switch (_mode)
+			{
+			case Auto33:
+			case Auto45:
+			{
+				printState(F("    Predkosc    "));
+			}break;
+			case Manual33:
+			case Manual45:
+			{
+				printState(F("-   Predkosc    +"));
+			}break;
+			default: {
+			}break;
+
+			}
+
+			while (isPlaying)
+			{
+				HandleButtonsWhilePlaying();
+				calculateAndApplySpeed(false);
+			}
+			SetState(E_STATE::Stopping);
 		}break;
-		default: {
-		}break;
-
-		}
-
-		while (isPlaying)
+		case Stopping:
 		{
-			HandleButtonsWhilePlaying();
-			calculateAndApplySpeed(false);
+			setSpeedForP0(POT0_Default);
+			EnableEngine(false);
+
+			printState(F("    Stop    "));
+
+			while (rotationsPerMinuteMeasured > 5)
+			{
+				calculateAndApplySpeed(true);
+
+			}
+
+			SetState(E_STATE::Idle);
 		}
-		SetState(E_STATE::Stopping);
-	}break;
-	case Stopping:
-	{
-		setSpeedForP0(POT0_Default);
-		EnableEngine(false);
-
-		printState("    Stop    ");
-
-		while (rotationsPerMinuteMeasured > 5)
-		{
-			calculateAndApplySpeed(true);
-
-		}
-		
-		SetState(E_STATE::Idle);
-	}
 	}
 }
 
@@ -398,8 +398,8 @@ void calculateAndApplySpeed(bool displayOnly) {
 		Serial.print(F("Current P0 Value: ")); Serial.println(currentPVal);
 
 		if (displayOnly) return;
-		
-	    setSpeedForP0(newPot);
+
+		setSpeedForP0(newPot);
 
 		// Check stability
 		if (abs(error) <= acceptableError) {
@@ -465,35 +465,35 @@ void SetSelectedMode(E_MODE selectedMode)
 
 	default:
 		break;
-	}
-	prev_mode = _mode;
+	}	
 	_mode = selectedMode;
 	printSelectedMode(selectedSpeed);
-	Serial.print("Selected mode:"); Serial.println(selectedSpeed);
+	
 }
 
 void HandleButtonsWhilePlaying()
 {
 	if (btnMenuEnter.click() && isPlaying)
 	{
-		Serial.println("Stop Pressed");
+		Serial.println(F("Stop Pressed"));
 		isPlaying = false;
 	}
 	if (_mode == E_MODE::Manual33 || _mode == E_MODE::Manual45)
 	{
 		if (btnMenuLeft.click()) {
 
-			Serial.print("New speed:"); Serial.println(selectedSpeed -= 0.05);
+			Serial.print(F("New speed:")); Serial.println(selectedSpeed -= 0.05);
 		}
 
 		if (btnMenuRight.click()) {
-			Serial.print("New speed:"); Serial.println(selectedSpeed += 0.05);
+			Serial.print(F("New speed:")); Serial.println(selectedSpeed += 0.05);
 		}
 	}
 }
 
 void printSelectedMode(double selectedSpeed)
 {
+	Serial.print(F("Selected mode:")); Serial.println(selectedSpeed);
 	char string[5];
 	// Convert float to a string:
 	dtostrf(selectedSpeed, 3, 2, string);
@@ -507,29 +507,29 @@ void printSelectedMode(double selectedSpeed)
 	case Auto33:
 	{
 		lcd.setCursor(0, 1);
-		lcd.print("A33");
+		lcd.print(F("A33"));
 		lcd.setCursor(12, 1);
-		lcd.print("rpm");
+		lcd.print(F("rpm"));
 	}break;
 	case Auto45: {
 		lcd.setCursor(0, 1);
-		lcd.print("A45");
+		lcd.print(F("A45"));
 		lcd.setCursor(12, 1);
-		lcd.print("rpm");
+		lcd.print(F("rpm"));
 	} break;
 	case Manual33:
 	{
 		lcd.setCursor(0, 1);
-		lcd.print("M33");
+		lcd.print(F("M33"));
 		lcd.setCursor(12, 1);
-		lcd.print("rpm");
+		lcd.print(F("rpm"));
 	}break;
 	case Manual45:
 	{
 		lcd.setCursor(0, 1);
-		lcd.print("M45");
+		lcd.print(F("M45"));
 		lcd.setCursor(12, 1);
-		lcd.print("rpm");
+		lcd.print(F("rpm"));
 	}
 	break;
 	default:
@@ -556,16 +556,16 @@ void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 		lcd.setCursor(6, 1);
 		lcd.print(currenMeasuredSpeed);
 		lcd.setCursor(12, 1);
-		lcd.print("rpm");
+		lcd.print(F("rpm"));
 
 		prevMeasuredSpeed = currenMeasuredSpeed;
 	}
 	lcd.setCursor(15, 1);
 	if (isVW) {
 
-		lcd.print("*");
+		lcd.print(F("*"));
 	}
-	else lcd.print(" ");
+	else lcd.print(F(" "));
 }
 
 void writeIntIntoEEPROM(int address, int number)
@@ -586,7 +586,7 @@ int readIntFromEEPROM(int address)
 /// This prints the top line of the LCD
 /// </summary>
 /// <param name="text"></param>
-void printState(const char* text)
+void printState(const __FlashStringHelper* text)
 {
 	Serial.println(text);
 	lcd.setCursor(0, 0);
@@ -605,35 +605,35 @@ void printMenu(const E_SETUP menuState)
 	{
 	case Min33:
 	{
-		lcd.print("Min33 = ");
+		lcd.print(F("Min33 = "));
 		printMenuValue(minPOT33);
 	}
 	break;
 	case Min45:
 	{
-		lcd.print("Min45 = ");
+		lcd.print(F("Min45 = "));
 		printMenuValue(minPOT45);
 	}break;
 	case UltraPrecision:
 	{
-		lcd.print("Ultra = ");
-		printMenuValue(IsUltraPrecisionEnabled ? "True" : "False");
+		lcd.print(F("Ultra = "));
+		printMenuValue(IsUltraPrecisionEnabled ? "Tak" : "Nie");
 	}break;
 	case Strobe:
 	{
-		lcd.print("Strobe = ");
-		printMenuValue(IsStrobeEnabled ? "True" : "False");
+		lcd.print("Strobo = ");
+		printMenuValue(IsStrobeEnabled ? "Tak" : "Nie");
 	}break;
 	case Exit:
 	{
-		lcd.print("     Exit    ");
+		lcd.print(F("     Wyjdz    "));
 	}break;
 	default:
 		break;
 	}
 }
 
-void setPIDParams(double _Kp, double _Ki, double _Kd, int _measureInterval,int _minPot, int _maxPot)
+void setPIDParams(double _Kp, double _Ki, double _Kd, int _measureInterval, int _minPot, int _maxPot)
 {
 	Kp = _Kp;
 	Ki = _Ki;
@@ -681,7 +681,7 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 		}
 	}
 	break;
-	case Strobe: 	
+	case Strobe:
 	case UltraPrecision: // only 0 and 1 are allowed
 	{
 		if (btnMenuLeft.click() && value > 0) {
@@ -704,7 +704,7 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 }
 
 // Function to handle setup editing
-void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
+void handleSetupEditing(const __FlashStringHelper* setupName, int& value, E_SETUP s_mode)
 {
 	printState(setupName);
 	printMenuValue(value); // Show the initial value
@@ -712,20 +712,20 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 
 	while (1)
 	{
-		
+
 		if (handleValueEditing(value, s_mode))
 		{
 			printMenuValue(value);
 			Serial.print(setupName);
-			Serial.print(" value: ");
+			Serial.print(F(" value: "));
 			Serial.println(value);
 		}
 
 		if (btnMenuEnter.click())
 		{
-			Serial.print("Saving ");
+			Serial.print(F("Saving "));
 			Serial.print(setupName);
-			Serial.print(" value...");
+			Serial.print(F(" value: "));
 			Serial.println(value);
 			int addr = 0;
 			if (s_mode == E_SETUP::Min33)
@@ -753,9 +753,9 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 			}
 			writeIntIntoEEPROM(addr, value);
 
-			printState("Saved");
+			printState(F("Saved"));
 
-			printState("   Ustawienia   ");
+			printState(F("   Ustawienia   "));
 			break;
 		}
 	}
@@ -763,14 +763,14 @@ void handleSetupEditing(const char* setupName, int& value, E_SETUP s_mode)
 
 void HandleSetup()
 {
-	printState("   Ustawienia   ");
+	printState(F("   Ustawienia   "));
 	E_SETUP setupType = E_SETUP::Min33;
 
 	printMenu(setupType);
 	printMenuValue(minPOT33); // Show the initial value for Min33
 
 	while (1)
-	{	
+	{
 		if (btnMenuLeft.click())
 		{
 			if (setupType > E_SETUP::Min33)
@@ -795,18 +795,18 @@ void HandleSetup()
 			case Exit:
 				return; // Exit the function
 			case Min33:
-				handleSetupEditing("     Min33   ", minPOT33, setupType);
+				handleSetupEditing(F("     Min33   "), minPOT33, setupType);
 				break;
 			case Min45:
-				handleSetupEditing("     Min45   ", minPOT45, setupType);
+				handleSetupEditing(F("     Min45   "), minPOT45, setupType);
 				break;
 			case UltraPrecision:
 			{
-				handleSetupEditing("Ultra Precision", IsUltraPrecisionEnabled, setupType);
+				handleSetupEditing(F("Ultra Precision"), IsUltraPrecisionEnabled, setupType);
 			}break;
 			case Strobe:
 			{
-				handleSetupEditing("     Strobe", IsStrobeEnabled, setupType);
+				handleSetupEditing(F("     Strobe"), IsStrobeEnabled, setupType);
 			}break;
 			default:
 				break;
