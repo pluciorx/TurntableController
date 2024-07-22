@@ -8,6 +8,8 @@
 //MOSFET GATE PIN
 #define PIN_EN 9
 
+#define DEBUG 
+
 //Buttons
 #define PIN_BTN_LEFT 5
 #define PIN_BTN_RIGHT 6
@@ -109,7 +111,7 @@ E_STATE _state;
 E_MODE _mode;
 
 void setup() {
-	Serial.begin(9600);
+	Serial.begin(115200);
 	lcd.init();
 	lcd.backlight();
 	lcd.clear();
@@ -388,15 +390,15 @@ void calculateAndApplySpeed(bool displayOnly) {
 		// Update currentPVal to the new potentiometer value
 		currentPVal = newPot;
 		printMeasuredSpeed(rotationsPerMinuteMeasured, isStabilised);
+
+#ifdef DEBUG
 		Serial.println("");
 		Serial.print(F("Requested Speed:")); Serial.println(selectedSpeed);
 		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
-		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);
-		Serial.print(F("Markers required per 1s: ")); Serial.println(markersPerSecondRequired, 3);
-		Serial.print(F("Markers counted per 1s: ")); Serial.println(impulsesPerSecond, 3);
+		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);		
 		Serial.print(F("Error: ")); Serial.println(error);
 		Serial.print(F("Current P0 Value: ")); Serial.println(currentPVal);
-
+#endif // DEBUG
 		if (displayOnly) return;
 
 		setSpeedForP0(newPot);
