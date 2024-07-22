@@ -3,12 +3,12 @@
 #include <util/atomic.h> // this library includes the ATOMIC_BLOCK macro.
 #include <EEPROM.h>
 //IR Sensor
-#define PIN_SENSOR 3
+#define PIN_SENSOR 2
 
 //MOSFET GATE PIN
-#define PIN_EN 9
+#define PIN_EN PIN_A3
 
-#define DEBUG 
+#define DEBUG 1
 
 //Buttons
 #define PIN_BTN_LEFT 5
@@ -44,7 +44,7 @@ unsigned long curMillis = 0;
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
 #define POT1 0x11
-#define POT0_Default 250
+#define POT0_Default 1
 
 int minPot, maxPot;
 int measureInterval;
@@ -58,8 +58,8 @@ double Kd;
 #define Ki33 0.00   // Increased to reduce steady-state error
 #define Kd33 1.10   // Introduced for damping oscillations
 #define measureInterval33 200
-int minPOT33 = 30;
-#define maxPOT33 200
+int maxPOT33 = 240;
+#define minPOT33 1
 #define EE_ADDR_33 0
 
 //45 definitions
@@ -67,8 +67,8 @@ int minPOT33 = 30;
 #define Ki45 0.00  // Increased to reduce steady-state error
 #define Kd45 1.1  // Introduced for damping oscillations
 #define measureInterval45  200
-int minPOT45 = 60;
-#define maxPOT45 255
+int maxPOT45 = 255;
+#define minPOT45 1
 #define EE_ADDR_45 4
 
 //--------------------CALIBRATION---------------------
@@ -100,8 +100,8 @@ enum E_MODE {
 };
 
 enum E_SETUP {
-	Min33 = 0,
-	Min45 = 1,
+	Max33 = 0,
+	Max45 = 1,
 	UltraPrecision = 2,
 	Strobe = 3,
 	Exit = 4
@@ -117,7 +117,7 @@ void setup() {
 	lcd.clear();
 
 	Serial.println();
-	Serial.println(F("Turntable v 1.0"));
+	Serial.println(F("Turntable v 1.1"));
 
 	markersPerWindowActual = 0;
 
@@ -125,25 +125,26 @@ void setup() {
 
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
+	pinMode(PIN_A6, INPUT);
 	EnableEngine(false);
 	setSpeedForP0(POT0_Default);
-	setSpeedForP1(255);
+	setSpeedForP1(1);
 
 	attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), interruptRoutine, RISING);
 	printState(F("  Machina czasu "));
 
-	int eMin33 = readIntFromEEPROM(EE_ADDR_33);
-	int eMin45 = readIntFromEEPROM(EE_ADDR_45);
+	int eMax33 = readIntFromEEPROM(EE_ADDR_33);
+	int eMax45 = readIntFromEEPROM(EE_ADDR_45);
 
-	minPOT33 = eMin33 > 0 ? eMin33 : minPOT33;
-	minPOT45 = eMin45 > 0 ? eMin45 : minPOT45;
+	maxPOT33 = eMax33 > 0 ? eMax33 : maxPOT33;
+	maxPOT45 = eMax45 > 0 ? eMax45 : maxPOT45;
 	IsUltraPrecisionEnabled = readIntFromEEPROM(EE_ADDR_VW) > 0 ? true : false;
 	IsStrobeEnabled = readIntFromEEPROM(EE_ADDR_STROBE) > 0 ? true : false;
 
 	Serial.print(F("Strobe:")); Serial.println(IsStrobeEnabled);
 	Serial.print(F("Ultra Precision:")); Serial.println(IsUltraPrecisionEnabled);
-	Serial.print(F("Min33 Value:")); Serial.println(minPOT33);
-	Serial.print(F("Min45 Value:")); Serial.println(minPOT45);
+	Serial.print(F("Max33 Value:")); Serial.println(maxPOT33);
+	Serial.print(F("Max45 Value:")); Serial.println(maxPOT45);
 
 	curMillis = lastMillis = millis();
 	while (1)
@@ -338,9 +339,10 @@ void loop() {
 		case Stopping:
 		{
 			setSpeedForP0(POT0_Default);
+			setSpeedForP1(minPot);
 			EnableEngine(false);
 
-			printState(F("    Stop    "));
+			printState(F("  Zatrzymanie  "));
 
 			while (rotationsPerMinuteMeasured > 5)
 			{
@@ -385,7 +387,7 @@ void calculateAndApplySpeed(bool displayOnly) {
 		previousError = error;
 
 		// Adjust new potentiometer value for reversed control
-		int newPot = constrain(currentPVal - (int)output, minPot, maxPot); // Reverse logic by adding output
+		int newPot = constrain(currentPVal + (int)output, minPot, maxPot); // Reverse logic by adding output
 
 		// Update currentPVal to the new potentiometer value
 		currentPVal = newPot;
@@ -401,7 +403,7 @@ void calculateAndApplySpeed(bool displayOnly) {
 #endif // DEBUG
 		if (displayOnly) return;
 
-		setSpeedForP0(newPot);
+		setSpeedForP1(newPot);
 
 		// Check stability
 		if (abs(error) <= acceptableError) {
@@ -607,16 +609,16 @@ void printMenu(const E_SETUP menuState)
 
 	switch (menuState)
 	{
-	case Min33:
+	case Max33:
 	{
-		lcd.print(F("Min33 = "));
-		printMenuValue(minPOT33);
+		lcd.print(F("Max33 = "));
+		printMenuValue(maxPOT33);
 	}
 	break;
-	case Min45:
+	case Max45:
 	{
-		lcd.print(F("Min45 = "));
-		printMenuValue(minPOT45);
+		lcd.print(F("Max45 = "));
+		printMenuValue(maxPOT45);
 	}break;
 	case UltraPrecision:
 	{
@@ -672,14 +674,14 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 	bool valueChanged = false;
 	switch (s_mode)
 	{
-	case Min33:
-	case Min45:
+	case Max33:
+	case Max45:
 	{
-		if (btnMenuLeft.click() && value > 0) {
+		if (btnMenuLeft.fastClick() && value > 0) {
 			value--; // Decrease the value with limit check
 			valueChanged = true;
 		}
-		if (btnMenuRight.click() && value < 254) {
+		if (btnMenuRight.fastClick() && value < 254) {
 			value++; // Increase the value
 			valueChanged = true;
 		}
@@ -732,16 +734,16 @@ void handleSetupEditing(const __FlashStringHelper* setupName, int& value, E_SETU
 			Serial.print(F(" value: "));
 			Serial.println(value);
 			int addr = 0;
-			if (s_mode == E_SETUP::Min33)
+			if (s_mode == E_SETUP::Max33)
 			{
 				addr = EE_ADDR_33;
-				minPOT33 = value;
+				maxPOT33 = value;
 			}
 
-			if (s_mode == E_SETUP::Min45)
+			if (s_mode == E_SETUP::Max45)
 			{
 				addr = EE_ADDR_45;
-				minPOT45 = value;
+				maxPOT45 = value;
 			}
 
 			if (s_mode == E_SETUP::UltraPrecision)
@@ -757,7 +759,7 @@ void handleSetupEditing(const __FlashStringHelper* setupName, int& value, E_SETU
 			}
 			writeIntIntoEEPROM(addr, value);
 
-			printState(F("Saved"));
+			printState(F("Zapisane"));
 
 			printState(F("   Ustawienia   "));
 			break;
@@ -768,16 +770,16 @@ void handleSetupEditing(const __FlashStringHelper* setupName, int& value, E_SETU
 void HandleSetup()
 {
 	printState(F("   Ustawienia   "));
-	E_SETUP setupType = E_SETUP::Min33;
+	E_SETUP setupType = E_SETUP::Max33;
 
 	printMenu(setupType);
-	printMenuValue(minPOT33); // Show the initial value for Min33
+	printMenuValue(maxPOT33); // Show the initial value for Min33
 
 	while (1)
 	{
 		if (btnMenuLeft.click())
 		{
-			if (setupType > E_SETUP::Min33)
+			if (setupType > E_SETUP::Max33)
 			{
 				setupType = static_cast<E_SETUP>(setupType - 1);
 				printMenu(setupType);
@@ -798,11 +800,11 @@ void HandleSetup()
 			{
 			case Exit:
 				return; // Exit the function
-			case Min33:
-				handleSetupEditing(F("     Min33   "), minPOT33, setupType);
+			case Max33:
+				handleSetupEditing(F("     Max33   "), maxPOT33, setupType);
 				break;
-			case Min45:
-				handleSetupEditing(F("     Min45   "), minPOT45, setupType);
+			case Max45:
+				handleSetupEditing(F("     Max45   "), maxPOT45, setupType);
 				break;
 			case UltraPrecision:
 			{
@@ -810,7 +812,7 @@ void HandleSetup()
 			}break;
 			case Strobe:
 			{
-				handleSetupEditing(F("     Strobe"), IsStrobeEnabled, setupType);
+				handleSetupEditing(F("     Strobo"), IsStrobeEnabled, setupType);
 			}break;
 			default:
 				break;

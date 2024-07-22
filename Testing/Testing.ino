@@ -7,7 +7,7 @@
 #define maxPOT 215
 
 #define MCP_ADDR 0x28 //(40)
-#define fet 9
+#define fet A3
 
 void setup()
 {
