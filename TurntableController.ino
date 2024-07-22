@@ -285,8 +285,8 @@ void loop() {
 			Serial.print(F("Markers per/s req:")); Serial.println(markersPerSecondRequired, 3);
 			Serial.print(F("Measure Interval ms:")); Serial.println(measureInterval);
 			Serial.print(F("Pulses required per/windows:")); Serial.println(markersPerWindowRequired, 3);
-			Serial.print(F("Max POT Value:")); Serial.println(minPot);
-			Serial.print(F("Min POT Value:")); Serial.println(maxPot);
+			Serial.print(F("Max POT Value:")); Serial.println(maxPot);
+			Serial.print(F("Min POT Value:")); Serial.println(minPot);
 			Serial.print(F("Current P1 Value:")); Serial.println(currentPVal);
 			Serial.print(F("Kp:")); Serial.println(Kp);
 			Serial.print(F("Ki:")); Serial.println(Ki);
@@ -342,7 +342,7 @@ void loop() {
 			setSpeedForP1(minPot);
 			EnableEngine(false);
 
-			printState(F("  Zatrzymanie  "));
+			printState(F("   Zatrzymanie  "));
 
 			while (rotationsPerMinuteMeasured > 5)
 			{
