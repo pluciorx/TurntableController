@@ -412,7 +412,9 @@ void calculateAndApplySpeed(bool displayOnly) {
 		}
 
 		if (stableCount >= stabilityThreshold) {
+			if (!isStabilised) Serial.println("Stable rpm reached.");
 			isStabilised = true;
+
 		}
 	}
 }
