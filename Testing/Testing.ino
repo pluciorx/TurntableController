@@ -50,7 +50,11 @@ void loop()
 	int state = atoi(buffer);
 	//if (state == -1) digitalWrite(fet, LOW);
 	//if (state == -2) digitalWrite(fet, HIGH);
-	if (state >= 0 ) setSpedForP0(state);
+
+	if (state == 1000) digitalWrite(fet, LOW);
+	if (state == 1001) digitalWrite(fet, HIGH);
+
+	if (state >= 0 && state <1000 ) setSpedForP0(state);
 	if (state < 0) setSpedForP1(abs(state)); //fine tunning
 
 }

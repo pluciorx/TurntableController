@@ -5,7 +5,7 @@
 //IR Sensor
 #define PIN_SENSOR 2
 
-//MOSFET GATE PIN
+//Engine enablePIN (SHORT A6 WITH THE PIN BELOW)
 #define PIN_EN PIN_A3
 
 #define DEBUG 1
@@ -14,7 +14,7 @@
 #define PIN_BTN_LEFT 5
 #define PIN_BTN_RIGHT 6
 #define PIN_BTN_MID 7
-#define BTN_DEBOUNCE_MS 80
+#define BTN_DEBOUNCE_MS 50
 
 ButtonControl  btnMenuRight(PIN_BTN_RIGHT);
 ButtonControl  btnMenuLeft(PIN_BTN_LEFT);
@@ -44,7 +44,7 @@ unsigned long curMillis = 0;
 #define MCP_ADDR 0x28 //(40)
 #define POT0 0x10 //
 #define POT1 0x11
-#define POT0_Default 1
+#define POT0_Default 1 //Lower value = higher span of the voltage available.
 
 int minPot, maxPot;
 int measureInterval;
@@ -54,18 +54,18 @@ double Kd;
 
 //--------------------CALIBRATION---------------------
 //33.33 PID definitions 
-#define Kp33 1.30  // Increased for faster response
-#define Ki33 0.00   // Increased to reduce steady-state error
-#define Kd33 1.10   // Introduced for damping oscillations
-#define measureInterval33 200
-int maxPOT33 = 240;
+#define Kp33 1.10  // Increased for faster response
+#define Ki33 0.05   // Increased to reduce steady-state error
+#define Kd33 0.50   // Introduced for damping oscillations
+#define measureInterval33 350
+int maxPOT33 = 255;
 #define minPOT33 1
 #define EE_ADDR_33 0
 
 //45 definitions
-#define Kp45 1.3  // Increased for faster response
-#define Ki45 0.00  // Increased to reduce steady-state error
-#define Kd45 1.1  // Introduced for damping oscillations
+#define Kp45 0.8  // Increased for faster response
+#define Ki45 0.0001  // Increased to reduce steady-state error
+#define Kd45 0.6  // Introduced for damping oscillations
 #define measureInterval45  200
 int maxPOT45 = 255;
 #define minPOT45 1
@@ -125,7 +125,8 @@ void setup() {
 
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
-	pinMode(PIN_A6, INPUT);
+	
+	digitalWrite(PIN_EN, LOW);
 	EnableEngine(false);
 	setSpeedForP0(POT0_Default);
 	setSpeedForP1(1);
@@ -177,8 +178,6 @@ void enableStrobe(bool isEnabled)
 
 	}
 }
-
-
 
 void  interruptRoutine() {
 	static unsigned long last_interrupt_time = 0;
@@ -233,6 +232,7 @@ void loop() {
 					SetSelectedMode(_mode);
 				}
 
+				
 				if (btnMenuEnter.click())
 				{
 					Serial.println(F("Play Pressed"));
@@ -337,9 +337,8 @@ void loop() {
 			SetState(E_STATE::Stopping);
 		}break;
 		case Stopping:
-		{
-			setSpeedForP0(POT0_Default);
-			setSpeedForP1(minPot);
+		{			
+			
 			EnableEngine(false);
 
 			printState(F("   Zatrzymanie  "));
@@ -347,7 +346,6 @@ void loop() {
 			while (rotationsPerMinuteMeasured > 5)
 			{
 				calculateAndApplySpeed(true);
-
 			}
 
 			SetState(E_STATE::Idle);
@@ -394,8 +392,7 @@ void calculateAndApplySpeed(bool displayOnly) {
 		printMeasuredSpeed(rotationsPerMinuteMeasured, isStabilised);
 
 #ifdef DEBUG
-		Serial.println("");
-		Serial.print(F("Requested Speed:")); Serial.println(selectedSpeed);
+		Serial.println();		
 		Serial.print(F("Markers required per interval: ")); Serial.println(markersPerWindowRequired, 3);
 		Serial.print(F("Markers counted per interval: ")); Serial.println(numberOfPulses);		
 		Serial.print(F("Error: ")); Serial.println(error);
@@ -430,7 +427,6 @@ void setSpeedForP1(int value)
 void setSpeedForP0(int value)
 {
 	writePot(MCP_ADDR, POT0, value);
-
 }
 
 void writePot(uint8_t address, uint8_t pot, uint16_t val) {
@@ -545,8 +541,12 @@ void printSelectedMode(double selectedSpeed)
 
 void printMeasuredSpeed(float currenMeasuredSpeed, bool isStabilised)
 {
+#ifdef DEBUG
+
 	Serial.print(F("RPM: ")); Serial.print(currenMeasuredSpeed);
 	Serial.print(F(" Is stable: ")); Serial.println(isStabilised);
+
+#endif // DEBUG
 	bool isVW = false;
 	if (isStabilised && IsUltraPrecisionEnabled && abs(currenMeasuredSpeed - selectedSpeed) < 1.9) {
 		isVW = true;
@@ -677,11 +677,11 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 	case Max33:
 	case Max45:
 	{
-		if (btnMenuLeft.fastClick() && value > 0) {
+		if (btnMenuLeft.fastClick() && value > -1) {
 			value--; // Decrease the value with limit check
 			valueChanged = true;
 		}
-		if (btnMenuRight.fastClick() && value < 254) {
+		if (btnMenuRight.fastClick() && value < 255) {
 			value++; // Increase the value
 			valueChanged = true;
 		}
@@ -817,16 +817,6 @@ void HandleSetup()
 			default:
 				break;
 			}
-
-			//printMenu(setupType);
-			//if (setupType == E_SETUP::Min33)
-			//{
-			//	printMenuValue(minPOT33); // Show the current value for Min33
-			//}
-			//else if (setupType == E_SETUP::Min45)
-			//{
-			//	printMenuValue(minPOT45); // Show the current value for Min45
-			//}
 		}
 	}
 }
