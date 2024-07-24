@@ -57,16 +57,16 @@ double Kd;
 #define Kp33 0.70  // Increased for faster response
 #define Ki33 0.00   // Increased to reduce steady-state error
 #define Kd33 0.60   // Introduced for damping oscillations
-#define measureInterval33 200
+#define measureInterval33 100
 int maxPOT33 = 255;
 #define minPOT33 1
 #define EE_ADDR_33 0
 
 //45 definitions
 #define Kp45 0.8  // Increased for faster response
-#define Ki45 0.0001  // Increased to reduce steady-state error
+#define Ki45 0.001  // Increased to reduce steady-state error
 #define Kd45 0.6  // Introduced for damping oscillations
-#define measureInterval45  200
+#define measureInterval45  100
 int maxPOT45 = 255;
 #define minPOT45 1
 #define EE_ADDR_45 4
