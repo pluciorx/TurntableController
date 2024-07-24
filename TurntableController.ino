@@ -6,7 +6,7 @@
 #define PIN_SENSOR 3
 
 //MOSFET GATE PIN
-#define PIN_EN 9
+#define PIN_EN PIN_A3
 
 #define DEBUG 
 
