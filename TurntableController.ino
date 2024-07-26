@@ -675,11 +675,11 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 	case Min33:
 	case Min45:
 	{
-		if (btnMenuLeft.click() && value > 0) {
+		if (btnMenuLeft.fastClick() && value > 0) {
 			value--; // Decrease the value with limit check
 			valueChanged = true;
 		}
-		if (btnMenuRight.click() && value < 254) {
+		if (btnMenuRight.fastClick() && value < 254) {
 			value++; // Increase the value
 			valueChanged = true;
 		}
@@ -688,11 +688,11 @@ bool handleValueEditing(int& value, E_SETUP s_mode)
 	case Strobe:
 	case UltraPrecision: // only 0 and 1 are allowed
 	{
-		if (btnMenuLeft.click() && value > 0) {
+		if (btnMenuLeft.fastClick() && value > 0) {
 			value--; // Decrease the value with limit check
 			valueChanged = true;
 		}
-		if (btnMenuRight.click() && value < 1) {
+		if (btnMenuRight.fastClick() && value < 1) {
 			value++; // Increase the value
 			valueChanged = true;
 		}
