@@ -775,7 +775,7 @@ void HandleSetup()
 
 	while (1)
 	{
-		if (btnMenuLeft.click())
+		if (btnMenuLeft.fastClick())
 		{
 			if (setupType > E_SETUP::Min33)
 			{
@@ -783,7 +783,7 @@ void HandleSetup()
 				printMenu(setupType);
 			}
 		}
-		if (btnMenuRight.click())
+		if (btnMenuRight.fastClick())
 		{
 			if (setupType < E_SETUP::Exit)
 			{
@@ -792,7 +792,7 @@ void HandleSetup()
 			}
 		}
 
-		if (btnMenuEnter.click())
+		if (btnMenuEnter.fastClick())
 		{
 			switch (setupType)
 			{
