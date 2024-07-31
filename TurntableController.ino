@@ -280,7 +280,7 @@ void loop() {
 			markersPerSecondRequired = revPerSecondRequired * NUM_MARKERS;
 
 			markersPerWindowRequired = markersPerSecondRequired * (measureInterval / 1000.0);
-
+			Serial.print(F("Machina czasu FW for PCB rev 1.0a:")); Serial.println(revPerSecondRequired, 3);
 			Serial.print(F("Rev's per/s req:")); Serial.println(revPerSecondRequired, 3);
 			Serial.print(F("Markers per/s req:")); Serial.println(markersPerSecondRequired, 3);
 			Serial.print(F("Measure Interval ms:")); Serial.println(measureInterval);
@@ -317,12 +317,12 @@ void loop() {
 			case Auto33:
 			case Auto45:
 			{
-				printState(F("    Predkosc    "));
+				printState(F("      Gram    "));
 			}break;
 			case Manual33:
 			case Manual45:
 			{
-				printState(F("-   Predkosc    +"));
+				printState(F("-     Gram    +"));
 			}break;
 			default: {
 			}break;
