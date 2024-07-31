@@ -126,8 +126,8 @@ void setup() {
 	markersPerWindowActual = 0;
 
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
-	pinMode(PIN_EN_STATE, OUTPUT);
-	digitalWrite(PIN_EN_STATE, LOW);
+	pinMode(PIN_EN_STATE, INPUT);
+	
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
 	
@@ -238,7 +238,7 @@ void loop() {
 				}
 
 				
-				if (btnMenuEnter.click())
+				if (btnMenuEnter.click() && digitalRead(PIN_EN_STATE) == HIGH)
 				{
 					Serial.println(F("Play Pressed"));
 					markersPerWindowActual = 0;
@@ -301,6 +301,7 @@ void loop() {
 
 			while (!isStabilised)
 			{
+				
 				calculateAndApplySpeed(false);
 
 				if (btnMenuEnter.click())
@@ -336,6 +337,7 @@ void loop() {
 
 			while (isPlaying)
 			{
+				if (digitalRead(PIN_EN_STATE) == LOW) break;
 				HandleButtonsWhilePlaying();
 				calculateAndApplySpeed(false);
 			}
@@ -445,7 +447,7 @@ void EnableEngine(bool isEnabled)
 {
 	enableStrobe(isEnabled);
 	digitalWrite(PIN_EN, isEnabled);
-	digitalWrite(PIN_EN_STATE, isEnabled);
+	
 }
 
 double average(int* array, int size) {
