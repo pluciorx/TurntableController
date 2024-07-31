@@ -303,7 +303,7 @@ void loop() {
 			{				
 				calculateAndApplySpeed(false);
 
-				if (btnMenuEnter.click() || digitalRead(PIN_EN_STATE) == HIGH)
+				if (btnMenuEnter.click() || digitalRead(PIN_EN_STATE) == LOW)
 				{
 					Serial.println(F("Stop"));
 					SetState(E_STATE::Stopping);
@@ -336,7 +336,7 @@ void loop() {
 
 			while (isPlaying)
 			{
-				if (digitalRead(PIN_EN_STATE) == HIGH) break;
+				if (digitalRead(PIN_EN_STATE) == LOW) break;
 				HandleButtonsWhilePlaying();
 				calculateAndApplySpeed(false);
 			}
