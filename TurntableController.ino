@@ -7,6 +7,8 @@
 
 //Engine enablePIN (SHORT A6 WITH THE PIN BELOW)
 #define PIN_EN PIN_A3
+//PIN ENGINE state
+#define PIN_EN_STATE 8
 
 #define DEBUG 1
 
@@ -37,6 +39,8 @@ int IsUltraPrecisionEnabled = false;
 #define EE_ADDR_STROBE 10
 int IsStrobeEnabled = false;
 
+
+
 volatile unsigned int markersPerWindowActual = 0;
 unsigned long lastMillis = 0;
 unsigned long curMillis = 0;
@@ -57,7 +61,7 @@ double Kd;
 #define Kp33 0.70  // Increased for faster response
 #define Ki33 0.00   // Increased to reduce steady-state error
 #define Kd33 0.60   // Introduced for damping oscillations
-#define measureInterval33 100
+#define measureInterval33 200
 int maxPOT33 = 255;
 #define minPOT33 1
 #define EE_ADDR_33 0
@@ -122,7 +126,8 @@ void setup() {
 	markersPerWindowActual = 0;
 
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
-
+	pinMode(PIN_EN_STATE, OUTPUT);
+	digitalWrite(PIN_EN_STATE, LOW);
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
 	
@@ -440,6 +445,7 @@ void EnableEngine(bool isEnabled)
 {
 	enableStrobe(isEnabled);
 	digitalWrite(PIN_EN, isEnabled);
+	digitalWrite(PIN_EN_STATE, isEnabled);
 }
 
 double average(int* array, int size) {
