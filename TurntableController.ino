@@ -238,7 +238,7 @@ void loop() {
 				}
 
 				
-				if (btnMenuEnter.click() && digitalRead(PIN_EN_STATE) == HIGH)
+				if (btnMenuEnter.click())
 				{
 					Serial.println(F("Play Pressed"));
 					markersPerWindowActual = 0;
@@ -299,12 +299,11 @@ void loop() {
 
 			markersPerWindowActual = 0;
 
-			while (!isStabilised)
-			{
-				
+			while (!isStabilised )
+			{				
 				calculateAndApplySpeed(false);
 
-				if (btnMenuEnter.click())
+				if (btnMenuEnter.click() || digitalRead(PIN_EN_STATE) == HIGH)
 				{
 					Serial.println(F("Stop"));
 					SetState(E_STATE::Stopping);
@@ -337,7 +336,7 @@ void loop() {
 
 			while (isPlaying)
 			{
-				if (digitalRead(PIN_EN_STATE) == LOW) break;
+				if (digitalRead(PIN_EN_STATE) == HIGH) break;
 				HandleButtonsWhilePlaying();
 				calculateAndApplySpeed(false);
 			}
