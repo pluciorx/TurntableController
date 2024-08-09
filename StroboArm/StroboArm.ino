@@ -11,6 +11,7 @@ int pos = 0;    // variable to store the servo position
 int pulseLength = 1000;
 int aktualnaPozycja = 0;
 bool IsStroboActive = false;
+bool _prevStrobeState = IsStroboActive;
 
 void setup() {
 
@@ -58,19 +59,23 @@ void loop() {
 		}
 		sei();
 	}
-	if (digitalRead(PIN_STROBO) == LOW)
+	if (digitalRead(PIN_STROBO) == HIGH && _prevStrobeState == false)
 	{
-		StopStrobo();
+		StartStrobo();
 	}
 	else
 	{
-		StartStrobo();
+		if (digitalRead(PIN_STROBO) == LOW)
+		{
+			StopStrobo();
+		}
 	}
 
 }
 
 void StopStrobo()
 {
+	_prevStrobeState = false;
 	cli();//stop all interrupts
 	TIMSK1 |= ~(1 << OCIE1A);
 	sei();//allow interrupts
@@ -78,6 +83,7 @@ void StopStrobo()
 
 void StartStrobo()
 {
+	_prevStrobeState = true;
 	cli();//stop all interrupts
 	// turn on CTC mode
 	TCCR1A = 0;// set entire TCCR1A register to 0
@@ -98,13 +104,11 @@ void StartStrobo()
 	sei();//allow interrupts
 }
 
-ISR(TIMER1_COMPA_vect) {//Interrupt at frequency of 50 Hz
-	//write your timer code here
+ISR(TIMER1_COMPA_vect) {
 	digitalWrite(11, HIGH);
 	delay(20);
 	digitalWrite(11, LOW);
 
-	//write your timer code here
 	digitalWrite(12, HIGH);
 	delay(2);
 	digitalWrite(12, LOW);
