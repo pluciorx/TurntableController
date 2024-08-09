@@ -77,7 +77,7 @@ void StopStrobo()
 {
 	_prevStrobeState = false;
 	cli();//stop all interrupts
-	TIMSK1 |= ~(1 << OCIE1A);
+	TIMSK1 &= ~(1 << OCIE1A); // Disable Timer Compare Interrupt
 	sei();//allow interrupts
 }
 
