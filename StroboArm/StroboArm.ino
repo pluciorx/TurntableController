@@ -1,4 +1,6 @@
-Servo myservo;
+#include <PWMServo.h>
+
+PWMServo myservo;
 
 #define PIN_czujnik1 2
 #define PIN_czyNapiecie 4
