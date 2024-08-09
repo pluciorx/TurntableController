@@ -9,7 +9,7 @@
 #define PIN_EN PIN_A3
 //PIN ENGINE state
 #define PIN_EN_STATE 8
-
+#define PIN_EN_STROBO 10
 #define DEBUG 1
 
 //Buttons
@@ -127,6 +127,7 @@ void setup() {
 
 	pinMode(PIN_SENSOR, INPUT_PULLUP);
 	pinMode(PIN_EN_STATE, INPUT);
+	pinMode(PIN_EN_STROBO, OUTPUT);
 	
 	//pinMode(PIN_EN, INPUT_PULLUP);
 	pinMode(PIN_EN, OUTPUT);
@@ -180,7 +181,7 @@ void enableStrobe(bool isEnabled)
 {
 	if (IsStrobeEnabled)
 	{
-
+		digitalWrite(PIN_EN_STROBO, isEnabled);
 	}
 }
 
@@ -446,7 +447,6 @@ void EnableEngine(bool isEnabled)
 {
 	enableStrobe(isEnabled);
 	digitalWrite(PIN_EN, isEnabled);
-	
 }
 
 double average(int* array, int size) {

@@ -21,8 +21,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StroboArm.ino" />
-    <ClCompile Include="C:\Users\pluci\Downloads\servo.ino" />
-    <ClCompile Include="C:\Users\pluci\Downloads\50hz1ms__2led.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.StroboArm.vsarduino.h">

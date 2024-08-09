@@ -16,7 +16,5 @@
 #include <arduino.h>
 #include <pins_arduino.h> 
 #include "..\StroboArm.ino"
-#include "..\C:\Users\pluci\Downloads\50hz1ms__2led.ino"
-#include "..\C:\Users\pluci\Downloads\servo.ino"
 #endif
 #endif

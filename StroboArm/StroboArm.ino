@@ -1,15 +1,14 @@
-#include <Servo.h>
-
 Servo myservo;
+
 #define PIN_czujnik1 2
 #define PIN_czyNapiecie 4
 #define PIN_STROBO 10
 #define PIN_SERVO 9
+
 int pos = 0;    // variable to store the servo position
 int pulseLength = 1000;
 int aktualnaPozycja = 0;
 bool IsStroboActive = false;
-
 
 void setup() {
 
@@ -28,11 +27,10 @@ void setup() {
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-
-
-
+	pos = 0;
 	//Serial.println(aktualnaPozycja);
 	if (digitalRead(PIN_czujnik1) == HIGH) {
+		cli();//stop all interrupts
 		digitalWrite(PIN_czyNapiecie, HIGH);
 		if (aktualnaPozycja >= 0) {
 			for (pos = aktualnaPozycja; pos >= 0; pos -= 1) {
@@ -42,8 +40,10 @@ void loop() {
 			aktualnaPozycja = pos + 1;
 			//Serial.println(aktualnaPozycja);
 		}
+		sei();
 	}
 	else {
+		cli();
 		pos = 0;
 		digitalWrite(PIN_czyNapiecie, LOW);
 		if (aktualnaPozycja <= 30) {
@@ -54,6 +54,7 @@ void loop() {
 			aktualnaPozycja = pos + 1;
 			//Serial.println(aktualnaPozycja);
 		}
+		sei();
 	}
 	if (digitalRead(PIN_STROBO) == LOW)
 	{
@@ -72,6 +73,7 @@ void StopStrobo()
 	TIMSK1 |= ~(1 << OCIE1A);
 	sei();//allow interrupts
 }
+
 void StartStrobo()
 {
 	cli();//stop all interrupts
