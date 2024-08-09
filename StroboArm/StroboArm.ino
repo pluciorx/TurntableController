@@ -2,12 +2,16 @@
 
 PWMServo myservo;
 
-#define PIN_czujnik1 2
-#define PIN_czyNapiecie 4
-#define PIN_STROBO 10
-#define PIN_SERVO 9
+#define PIN_SENSOR_ARM 8
+#define PIN_LED_ARM 4
 
-int pos = 0;    // variable to store the servo position
+#define PIN_SERVO 9
+#define PIN_STROBO 10
+#define PIN_LED1 11
+#define PIN_LED2 12
+
+
+int pos = 0;
 int pulseLength = 1000;
 int aktualnaPozycja = 0;
 bool IsStroboActive = false;
@@ -15,16 +19,18 @@ bool _prevStrobeState = IsStroboActive;
 
 void setup() {
 
-	pinMode(11, OUTPUT);  //LED pin (to blink in 50Hz frequency)
-	pinMode(12, OUTPUT);  //LED pin 
-
+	
 	Serial.begin(9600);
-	myservo.attach(PIN_SERVO);  // attaches the servo on pin 9 to the servo object
-	pinMode(PIN_czujnik1, INPUT);
-	pinMode(PIN_STROBO, INPUT);
+	myservo.attach(PIN_SERVO);  
+	pinMode(PIN_SENSOR_ARM, INPUT);
 
-	pinMode(PIN_czyNapiecie, OUTPUT);
-	digitalWrite(PIN_czyNapiecie, LOW);
+	pinMode(PIN_LED_ARM, OUTPUT);
+	digitalWrite(PIN_LED_ARM, LOW);
+
+	pinMode(PIN_STROBO, INPUT);
+	pinMode(PIN_LED1, OUTPUT);
+	pinMode(PIN_LED2, OUTPUT);
+
 	myservo.write(0);
 }
 
@@ -32,9 +38,9 @@ void setup() {
 void loop() {
 	pos = 0;
 	//Serial.println(aktualnaPozycja);
-	if (digitalRead(PIN_czujnik1) == HIGH) {
+	if (digitalRead(PIN_SENSOR_ARM) == HIGH) {
 		cli();//stop all interrupts
-		digitalWrite(PIN_czyNapiecie, HIGH);
+		digitalWrite(PIN_LED_ARM, HIGH);
 		if (aktualnaPozycja >= 0) {
 			for (pos = aktualnaPozycja; pos >= 0; pos -= 1) {
 				myservo.write(pos);
@@ -48,7 +54,7 @@ void loop() {
 	else {
 		cli();
 		pos = 0;
-		digitalWrite(PIN_czyNapiecie, LOW);
+		digitalWrite(PIN_LED_ARM, LOW);
 		if (aktualnaPozycja <= 30) {
 			for (pos = aktualnaPozycja; pos <= 30; pos += 1) {
 				myservo.write(pos);
@@ -70,7 +76,6 @@ void loop() {
 			StopStrobo();
 		}
 	}
-
 }
 
 void StopStrobo()
