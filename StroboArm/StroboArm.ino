@@ -29,33 +29,35 @@ void setup() {
 // the loop function runs over and over again until power down or reset
 void loop() {
 
+
+
+	//Serial.println(aktualnaPozycja);
+	if (digitalRead(PIN_czujnik1) == HIGH) {
+		digitalWrite(PIN_czyNapiecie, HIGH);
+		if (aktualnaPozycja >= 0) {
+			for (pos = aktualnaPozycja; pos >= 0; pos -= 1) {
+				myservo.write(pos);
+				delay(50);
+			}
+			aktualnaPozycja = pos + 1;
+			//Serial.println(aktualnaPozycja);
+		}
+	}
+	else {
+		pos = 0;
+		digitalWrite(PIN_czyNapiecie, LOW);
+		if (aktualnaPozycja <= 30) {
+			for (pos = aktualnaPozycja; pos <= 30; pos += 1) {
+				myservo.write(pos);
+				delay(50);
+			}
+			aktualnaPozycja = pos + 1;
+			//Serial.println(aktualnaPozycja);
+		}
+	}
 	if (digitalRead(PIN_STROBO) == LOW)
 	{
 		StopStrobo();
-		//Serial.println(aktualnaPozycja);
-		if (digitalRead(PIN_czujnik1) == HIGH) {
-			digitalWrite(PIN_czyNapiecie, HIGH);
-			if (aktualnaPozycja >= 0) {
-				for (pos = aktualnaPozycja; pos >= 0; pos -= 1) {
-					myservo.write(pos);
-					delay(50);
-				}
-				aktualnaPozycja = pos + 1;
-				//Serial.println(aktualnaPozycja);
-			}
-		}
-		else {
-			pos = 0;
-			digitalWrite(PIN_czyNapiecie, LOW);
-			if (aktualnaPozycja <= 30) {
-				for (pos = aktualnaPozycja; pos <= 30; pos += 1) {
-					myservo.write(pos);
-					delay(50);
-				}
-				aktualnaPozycja = pos + 1;
-				//Serial.println(aktualnaPozycja);
-			}
-		}
 	}
 	else
 	{
